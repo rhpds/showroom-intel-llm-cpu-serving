@@ -69,7 +69,7 @@ You can also test the model endpoint from the terminal using curl:
 
 [source,bash,role="execute",subs="attributes+"]
 ----
-export VLLM_URL=$(oc get route vllm-server -n {project_name} -o jsonpath='https://{.spec.host}')
+export VLLM_URL=$(oc get route vllm-server -n {project_name} -o jsonpath='https://\{.spec.host\}')
 curl -s ${VLLM_URL}/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
