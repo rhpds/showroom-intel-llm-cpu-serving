@@ -1,0 +1,131 @@
+= Module 2: Deploy the HR Assistant
+
+_Estimated time: 15 minutes_
+
+In this module you will clone the quickstart repository, deploy the HR Assistant on OpenShift using Helm, and verify that all components are running.
+
+== Clone the Repository
+
+Start by cloning the quickstart repository into your home directory:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+cd ~ && git clone {quickstart_repo}
+----
+
+Change into the project directory:
+
+[source,bash,role="execute"]
+----
+cd ~/llm-cpu-serving
+----
+
+Take a look at the Helm chart structure:
+
+[source,bash,role="execute"]
+----
+ls ~/llm-cpu-serving/helm/
+----
+
+You will see the chart files that define the vLLM model server, AnythingLLM workbench, Llama Stack service, and the RAG seed job.
+
+== Deploy with Helm
+
+Make sure you are in the correct OpenShift project:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc project {project_name}
+----
+
+Install the quickstart using the Helm chart:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+helm install llm-cpu-serving ~/llm-cpu-serving/helm/ \
+  --set username={user}
+----
+
+This single command deploys all four components:
+
+* *vLLM model server* -- pulls TinyLlama 1.1B from the OCI registry and serves it on CPU
+* *AnythingLLM workbench* -- the RAG-enabled chat UI
+* *Llama Stack* -- the API integration layer
+* *RAG seed job* -- pre-loads HR compliance documents into the vector store
+
+== Watch the Pods Come Up
+
+Monitor the deployment until all pods are running:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc get pods -n {project_name} -w
+----
+
+Press `Ctrl+C` once you see the pods reach `Running` status. You should see pods for:
+
+* `vllm-server` -- the model serving container
+* `anythingllm` -- the workbench UI
+* `llamastack` -- the API layer
+
+[NOTE]
+====
+The vLLM pod may take 3-5 minutes to start. It needs to download the TinyLlama model weights from `oci://quay.io/rh-aiservices-bu/tinyllama:1.0` and load them into memory. This is expected behavior for CPU-based model serving.
+====
+
+== Verify the Model Is Loaded
+
+Check the vLLM server logs to confirm the model has loaded successfully:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc logs -l app=vllm-server -n {project_name} --tail=30
+----
+
+Look for log messages indicating the model is ready. You should see output confirming that the server is running on CPU and the TinyLlama model is loaded.
+
+== Check the InferenceService
+
+Verify that the KServe InferenceService is ready:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc get inferenceservice -n {project_name}
+----
+
+The `READY` column should show `True`. This means the model endpoint is accepting requests.
+
+== Get the AnythingLLM Route
+
+Retrieve the AnythingLLM route URL -- you will use this in the next module:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+export ANYTHINGLLM_URL=$(oc get route anythingllm -n {project_name} -o jsonpath='https://{.spec.host}')
+echo "AnythingLLM URL: ${ANYTHINGLLM_URL}"
+----
+
+== Quick Smoke Test
+
+Confirm the vLLM endpoint is responding by sending a simple request:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+export VLLM_URL=$(oc get route vllm-server -n {project_name} -o jsonpath='https://{.spec.host}')
+curl -s ${VLLM_URL}/v1/models | python3 -m json.tool
+----
+
+You should see a JSON response listing `TinyLlama/TinyLlama-1.1B-Chat-v1.0` as an available model.
+
+== Checkpoint
+
+At this point you have:
+
+* [x] Cloned the quickstart repository
+* [x] Deployed all components via Helm
+* [x] Verified pods are running (vLLM, AnythingLLM, Llama Stack)
+* [x] Confirmed the model loaded on CPU
+* [x] Checked the InferenceService is ready
+* [x] Retrieved the AnythingLLM route URL
+
+Next, let's explore the AnythingLLM workbench. Proceed to xref:03-explore-anythingllm.adoc[Module 3: Explore the AI Workbench].

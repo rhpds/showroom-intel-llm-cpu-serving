@@ -1,0 +1,71 @@
+= Serve LLMs on Intel Xeon CPUs
+
+Welcome to the *HR Assistant for Financial Services* lab. In this hands-on workshop you will deploy a complete AI-powered HR assistant on Red Hat OpenShift AI -- running entirely on CPU, with no GPU hardware required.
+
+== The Use Case
+
+Financial services firms face strict compliance requirements for employee onboarding, communications monitoring, and workplace conduct. HR teams must answer questions that span dozens of regulatory documents -- FINRA rules, internal policies, and federal labor guidelines.
+
+This quickstart deploys a Retrieval-Augmented Generation (RAG) system that helps HR representatives answer compliance questions accurately by grounding responses in authoritative source documents, rather than relying on a model's general knowledge alone.
+
+== What You Will Learn
+
+By the end of this lab you will understand how to:
+
+* *Deploy vLLM on CPU* -- serve the TinyLlama 1.1B model using vLLM's CPU runtime on {intel_platform} processors
+* *Use AnythingLLM for RAG* -- interact with a workbench UI that retrieves relevant HR documents before generating answers
+* *Test the Model Playground* -- access the model directly through the Red Hat OpenShift AI dashboard
+* *Understand CPU inference trade-offs* -- learn when CPU-based serving is the right choice for enterprise workloads
+
+== Architecture at a Glance
+
+The system has four components:
+
+[cols="1,3"]
+|===
+| Component | Purpose
+
+| *vLLM on CPU*
+| Serves TinyLlama 1.1B using the KServe model serving runtime. Runs on {intel_platform} with no GPU.
+
+| *AnythingLLM*
+| RAG-enabled workbench UI. Retrieves HR compliance documents and includes them as context before querying the model.
+
+| *Llama Stack*
+| Provides a standardized API layer for model interaction and tooling integration.
+
+| *RAG Seed Job*
+| Pre-loads HR compliance documents from web URLs into the AnythingLLM vector store at deployment time.
+|===
+
+== Prerequisites
+
+* An OpenShift cluster provisioned through RHDP (Red Hat Demo Platform)
+* A modern web browser
+* Terminal access (provided in the right panel)
+
+== Time Estimate
+
+This lab takes approximately *60 minutes* to complete:
+
+[cols="1,2,1"]
+|===
+| Module | Topic | Time
+
+| 1 | Accessing the Cluster | 5 min
+| 2 | Deploy the HR Assistant | 15 min
+| 3 | Explore the AI Workbench | 15 min
+| 4 | Chat with HR Documents | 15 min
+| 5 | Test the Model Playground | 10 min
+| 6 | The Intel Xeon Story | 5 min
+| 7 | Conclusion | 5 min
+|===
+
+[NOTE]
+====
+Each module builds on the previous one. The deployment in Module 2 creates resources used throughout the remaining exercises, so work through them in order.
+====
+
+== Ready?
+
+When you are ready, proceed to xref:01-accessing-cluster.adoc[Module 1: Accessing the Cluster] to log into your OpenShift environment.

@@ -1,0 +1,111 @@
+= Module 3: Explore the AI Workbench
+
+_Estimated time: 15 minutes_
+
+In this module you will open the AnythingLLM workbench, explore its interface, understand how it connects to the vLLM model server, and send your first prompt.
+
+== Open AnythingLLM
+
+The AnythingLLM workbench is available as an OpenShift route. You can access it in two ways:
+
+*Option A -- App UI Tab:* Click the *App UI* tab in the header bar of this lab environment.
+
+*Option B -- Direct route:* If you need the URL, retrieve it from the terminal:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc get route anythingllm -n {project_name} -o jsonpath='https://{.spec.host}'
+----
+
+Open that URL in your browser. You should see the AnythingLLM welcome screen.
+
+== Navigate the Interface
+
+AnythingLLM provides a full-featured AI workbench. Take a moment to explore the main areas:
+
+=== Workspaces
+
+The left sidebar shows your *workspaces*. A workspace is a self-contained environment that combines a chat interface with a set of uploaded documents. The quickstart pre-creates an HR workspace for you.
+
+Click into the *HR Assistant* workspace. This is where you will interact with the model and the loaded HR documents.
+
+=== Settings
+
+Click the *Settings* gear icon in the lower-left corner. Navigate through the configuration panels:
+
+* *LLM Provider* -- This is set to connect to the vLLM endpoint running in the same OpenShift project. The provider type is "LocalAI" pointing to the internal vLLM service URL.
+* *Embedding Model* -- Used to convert documents into vectors for RAG retrieval.
+* *Vector Database* -- The built-in vector store holds the embedded HR documents.
+
+[NOTE]
+====
+The key insight here: AnythingLLM is *not* running the model itself. It sends prompts to the vLLM server, which runs TinyLlama 1.1B on CPU. AnythingLLM handles the RAG orchestration -- retrieving relevant document chunks and prepending them to the prompt before sending it to the model.
+====
+
+== Understand the Model Configuration
+
+From the Settings page, click *LLM Provider*. Observe:
+
+* *Model:* `TinyLlama/TinyLlama-1.1B-Chat-v1.0`
+* *API Base URL:* Points to the vLLM service inside the cluster
+* *Max Tokens:* The maximum number of tokens the model will generate per response
+
+This configuration means every chat message in AnythingLLM goes through the following path:
+
+1. AnythingLLM receives your question
+2. It searches the vector store for relevant HR document chunks
+3. It constructs a prompt with the retrieved context plus your question
+4. It sends the prompt to the vLLM endpoint
+5. vLLM runs inference on {intel_platform} CPU and returns the response
+
+Close the Settings panel when you are done exploring.
+
+== Send Your First Prompt
+
+Return to the *HR Assistant* workspace. In the chat input at the bottom, type:
+
+----
+What is the role of an HR representative in banking?
+----
+
+Press Enter and wait for the response. Observe:
+
+* *Response quality* -- TinyLlama 1.1B is a small model (1.1 billion parameters). Responses are coherent but less detailed than larger models. This is expected and intentional -- the goal is to demonstrate CPU-based serving, not to achieve maximum quality.
+* *Latency* -- The response takes several seconds. CPU inference is slower than GPU inference, but it requires no specialized hardware. You are running this on standard {intel_platform} server processors.
+
+== Try Additional Prompts
+
+Send a few more prompts to get a feel for the model's capabilities:
+
+----
+What are the main responsibilities of a compliance officer?
+----
+
+----
+Summarize the key employment regulations for financial institutions.
+----
+
+Notice how the model provides general answers. In the next module, you will see how RAG changes the quality of responses by grounding them in specific HR compliance documents.
+
+== Check the vLLM Logs
+
+While the model is serving requests, check the vLLM server logs to see inference activity:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc logs -l app=vllm-server -n {project_name} --tail=10
+----
+
+You should see log entries for each inference request, including metrics like tokens generated and processing time. This confirms the model is running on CPU and actively serving the AnythingLLM frontend.
+
+== Checkpoint
+
+At this point you have:
+
+* [x] Opened the AnythingLLM workbench in your browser
+* [x] Explored workspaces, settings, and model configuration
+* [x] Understood the request flow from AnythingLLM to vLLM
+* [x] Sent your first prompt and observed CPU inference latency
+* [x] Verified inference activity in the vLLM logs
+
+Next, let's put RAG to work with real HR documents. Proceed to xref:04-rag-documents.adoc[Module 4: Chat with HR Documents].

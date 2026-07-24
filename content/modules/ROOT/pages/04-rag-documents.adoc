@@ -1,0 +1,123 @@
+= Module 4: Chat with HR Documents
+
+_Estimated time: 15 minutes_
+
+In this module you will explore the HR compliance documents pre-loaded by the quickstart, ask domain-specific questions, and compare RAG-enabled answers against the model's baseline knowledge.
+
+== How Documents Were Loaded
+
+When you deployed the quickstart in Module 2, a *RAG seed job* ran automatically. This job:
+
+1. Downloaded HR compliance documents from pre-configured web URLs
+2. Split the documents into chunks suitable for retrieval
+3. Generated vector embeddings for each chunk
+4. Stored the embeddings in the AnythingLLM vector database
+
+These documents cover topics like employee onboarding in regulated industries, workplace conduct policies, and FINRA compliance requirements for financial services firms.
+
+== View the Loaded Documents
+
+In the AnythingLLM workbench, navigate to the *HR Assistant* workspace. Click the *Documents* icon (folder icon) in the workspace settings area.
+
+You should see a list of the pre-loaded HR documents. Each document has been chunked and embedded -- meaning the system can search through their content when answering your questions.
+
+Take a moment to browse the document names and note the compliance topics they cover.
+
+== Ask HR-Specific Questions
+
+Now let's put RAG to work. In the HR Assistant workspace chat, ask the following questions one at a time and observe the responses:
+
+=== Question 1: Employee Onboarding
+
+----
+What are the key compliance requirements for employee onboarding in banking?
+----
+
+Notice how the response references specific regulatory requirements. The model is not just generating from its training data -- it is pulling relevant passages from the loaded HR documents and using them to construct a grounded answer.
+
+=== Question 2: Workplace Conduct
+
+----
+How should I handle a workplace harassment complaint in a financial services firm?
+----
+
+Observe the level of specificity in the response. The answer should reference procedures and guidelines from the loaded compliance documents, rather than providing generic advice.
+
+=== Question 3: FINRA Communications Monitoring
+
+----
+What are the FINRA requirements for employee communications monitoring?
+----
+
+This question targets a specific regulatory body. If the loaded documents contain FINRA-related content, the RAG system will retrieve those passages and include them in the response. Compare this to what a small model would produce without document context.
+
+== Compare RAG vs Direct Model Answers
+
+To understand the value RAG adds, you can compare responses with and without document retrieval.
+
+=== With RAG (Default)
+
+The responses you just received used RAG -- AnythingLLM searched the document store and included relevant passages in the prompt context. This grounds the model's answers in real source material.
+
+=== Without RAG (Direct Model)
+
+You can test the model directly using the vLLM endpoint, bypassing AnythingLLM and the document store entirely:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+export VLLM_URL=$(oc get route vllm-server -n {project_name} -o jsonpath='https://{.spec.host}')
+curl -s ${VLLM_URL}/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    "messages": [{"role": "user", "content": "What are the FINRA requirements for employee communications monitoring?"}],
+    "max_tokens": 256
+  }' | python3 -m json.tool
+----
+
+Compare this response with the RAG-enabled answer you received in AnythingLLM. You should notice:
+
+* *Without RAG* -- The model gives a generic, often vague answer based solely on its training data. A 1.1B parameter model has limited knowledge of specific regulations.
+* *With RAG* -- The model cites specific details from the compliance documents, producing more accurate and actionable answers.
+
+== Understanding the RAG Flow
+
+When you ask a question in AnythingLLM with RAG enabled, here is what happens behind the scenes:
+
+1. *Embed the query* -- Your question is converted into a vector embedding
+2. *Search the vector store* -- The system finds the document chunks most similar to your query
+3. *Build the context* -- The top matching chunks are inserted into the prompt as reference material
+4. *Generate the answer* -- The full prompt (context + question) is sent to vLLM on CPU
+5. *Return the response* -- The model generates an answer grounded in the retrieved documents
+
+This is the same pattern used in enterprise RAG systems at scale. The only difference here is the model size -- a production deployment might use a larger model for higher quality, but the architecture remains identical.
+
+== Try Your Own Questions
+
+Experiment with additional questions related to HR compliance:
+
+----
+What training is required for new employees in securities firms?
+----
+
+----
+What are the record retention requirements for employee communications?
+----
+
+----
+How do you conduct a compliant employee termination in banking?
+----
+
+Notice how the quality varies depending on whether the loaded documents cover the specific topic. RAG is only as good as the documents in the vector store.
+
+== Checkpoint
+
+At this point you have:
+
+* [x] Understood how the RAG seed job pre-loaded HR documents
+* [x] Viewed the loaded documents in the AnythingLLM workspace
+* [x] Asked domain-specific HR compliance questions with RAG
+* [x] Compared RAG-enabled vs direct model responses
+* [x] Understood the end-to-end RAG retrieval flow
+
+Next, let's test the model directly through the OpenShift AI playground. Proceed to xref:05-playground.adoc[Module 5: Test the Model Playground].

@@ -1,0 +1,122 @@
+= Module 7: Conclusion
+
+_Estimated time: 5 minutes_
+
+Congratulations -- you have deployed, explored, and tested a complete HR Assistant with RAG on {intel_platform} CPUs. Let's recap what you accomplished and explore where to go next.
+
+== What You Built
+
+Over the course of this lab, you deployed a system that:
+
+1. *Serves an LLM on CPU* -- TinyLlama 1.1B running via vLLM on {intel_platform} processors, with no GPU hardware required
+2. *Provides RAG-enabled chat* -- AnythingLLM retrieves HR compliance documents and grounds the model's answers in authoritative sources
+3. *Offers direct model access* -- The OpenShift AI playground exposes the model endpoint for testing and evaluation
+4. *Runs on standard infrastructure* -- The entire stack deploys on the same OpenShift cluster as your other workloads
+
+== The Business Value
+
+This quickstart demonstrates three capabilities that matter for enterprise adoption:
+
+=== Compliance-Aware AI on Existing Infrastructure
+
+Financial services firms can deploy AI assistants that reference their own compliance documents -- FINRA rules, internal HR policies, labor regulations -- without procuring GPU hardware or sending data to external APIs.
+
+=== Reduced Barrier to Entry
+
+The deployment took a single Helm command. No GPU operator, no node affinity rules, no driver management. Teams can experiment with LLM-powered applications in hours, not weeks.
+
+=== Grounded Answers via RAG
+
+By retrieving source documents before generating responses, the system reduces hallucination and produces answers that can be traced back to specific policies. This traceability is critical in regulated industries.
+
+== What You Learned
+
+[cols="1,2"]
+|===
+| Module | Key Concept
+
+| 1. Accessing the Cluster
+| Log into OpenShift and verify the lab environment
+
+| 2. Deploy the HR Assistant
+| Helm-based deployment of vLLM, AnythingLLM, Llama Stack, and RAG seed data
+
+| 3. Explore the AI Workbench
+| AnythingLLM connects to vLLM as its LLM provider; the model runs on CPU
+
+| 4. Chat with HR Documents
+| RAG retrieves document chunks to ground responses; direct model answers lack this context
+
+| 5. Test the Model Playground
+| The RHOAI playground provides direct model access without RAG
+
+| 6. The Intel Xeon Story
+| CPU inference fits small models, classification, and RAG pipelines on hardware you already own
+|===
+
+== What's Next
+
+This quickstart demonstrates the core architecture with TinyLlama 1.1B and pre-loaded documents. Here is how you would extend it for production:
+
+=== Try a Larger Model
+
+Swap TinyLlama for a 7B parameter model to see the trade-off between quality and latency on CPU. Update the Helm values to point to a different model and redeploy.
+
+=== Add Your Own Documents
+
+Upload your organization's actual HR policies, employee handbooks, or regulatory documents into AnythingLLM. The RAG pipeline works with any text content.
+
+=== Scale for Teams
+
+For a production deployment you would:
+
+* Add authentication to AnythingLLM for multi-user access
+* Configure persistent storage for the vector database
+* Set resource limits and requests on the vLLM pod for predictable performance
+* Add horizontal pod autoscaling for the model server
+
+=== Explore Llama Stack
+
+The deployed Llama Stack service provides a standardized API for model interaction, safety guardrails, and tool integration. Explore its endpoints to build more sophisticated agent workflows.
+
+== Links and Resources
+
+* *Quickstart Repository:* {quickstart_repo}
+* *Red Hat AI Quickstarts:* https://github.com/rh-ai-quickstart
+* *OpenShift AI Documentation:* https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed
+
+== Cleanup
+
+When you are finished with the lab, clean up the deployment:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+helm uninstall llm-cpu-serving -n {project_name}
+----
+
+Verify the resources have been removed:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc get pods -n {project_name}
+----
+
+If you want to remove the project entirely:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc delete project {project_name}
+----
+
+Remove the cloned repository:
+
+[source,bash,role="execute"]
+----
+rm -rf ~/llm-cpu-serving
+----
+
+== Thank You
+
+You have completed the *Serve LLMs on Intel Xeon CPUs* lab. The patterns demonstrated here -- CPU-based model serving, RAG with document retrieval, and workbench-style AI interfaces -- are directly applicable to enterprise deployments where GPU hardware is unavailable, unnecessary, or cost-prohibitive.
+
+Powered by *Red Hat OpenShift AI* running on *{intel_platform}* processors.

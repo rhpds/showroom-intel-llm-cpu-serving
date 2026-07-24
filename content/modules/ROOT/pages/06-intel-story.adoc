@@ -1,0 +1,120 @@
+= Module 6: The Intel Xeon Story
+
+_Estimated time: 5 minutes_
+
+In this module you will explore why CPU-based inference matters for enterprise AI, check for Intel-specific optimizations in the vLLM runtime, and understand when CPU serving is the right choice.
+
+== Why CPU Inference Matters
+
+Most enterprise data centers already run on {intel_platform} processors. GPU hardware requires separate procurement cycles, specialized cooling, and higher power budgets. For many AI workloads, CPU inference eliminates these barriers entirely.
+
+The economics are straightforward:
+
+* *No additional hardware cost* -- You are running inference on servers you already own and operate
+* *No GPU procurement delays* -- GPU supply chains can add months to project timelines
+* *Standard infrastructure* -- Same monitoring, same networking, same security tooling
+* *Elastic scaling* -- Scale model serving across the same OpenShift cluster that runs your other workloads
+
+== Check Intel Optimizations
+
+The vLLM CPU runtime includes optimizations for Intel instruction set extensions. Check the vLLM server logs for details on what hardware features are in use:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc logs -l app=vllm-server -n {project_name} | grep -i -E "avx|amx|cpu|intel|instruction" | head -20
+----
+
+Depending on the specific {intel_platform} generation in your cluster, you may see references to:
+
+* *AVX-512* -- Advanced Vector Extensions that accelerate matrix operations. Available on 3rd Gen Intel Xeon Scalable (Ice Lake) and later.
+* *AMX (Advanced Matrix Extensions)* -- Hardware acceleration for INT8 and BF16 matrix multiplication. Available on 4th Gen Intel Xeon Scalable (Sapphire Rapids) and later.
+* *VNNI (Vector Neural Network Instructions)* -- Optimized instructions for inference workloads.
+
+These extensions allow the CPU to process model computations more efficiently, narrowing the performance gap with GPU for smaller models.
+
+== Check the Node Hardware
+
+See what hardware is running your model by checking the node details:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc get nodes -o custom-columns=NAME:.metadata.name,CPU:.status.capacity.cpu,MEMORY:.status.capacity.memory
+----
+
+This shows the CPU core count and memory available on each node. vLLM on CPU can use all available cores for parallel inference operations.
+
+== When to Use CPU Inference
+
+CPU inference is the right choice for specific workload profiles. Here is a practical decision framework:
+
+=== Ideal for CPU
+
+[cols="1,2"]
+|===
+| Workload | Why CPU Works
+
+| *Small models (< 7B parameters)*
+| Fit comfortably in system memory; inference latency is acceptable for interactive use
+
+| *Classification and extraction*
+| Short outputs (labels, entities) minimize generation time
+
+| *Embedding generation*
+| Batch processing of documents for vector search -- latency per request is less critical
+
+| *RAG retrieval pipelines*
+| The retrieval step is I/O-bound; the model step with a small LLM runs well on CPU
+
+| *Low-concurrency serving*
+| Teams of 10-50 users with intermittent queries
+|===
+
+=== Better on GPU
+
+[cols="1,2"]
+|===
+| Workload | Why GPU Is Needed
+
+| *Large models (70B+ parameters)*
+| Model weights exceed practical CPU memory bandwidth
+
+| *High-throughput batch generation*
+| Hundreds of concurrent requests require GPU parallelism
+
+| *Vision and multimodal models*
+| Image processing pipelines benefit significantly from GPU acceleration
+
+| *Real-time streaming*
+| Sub-100ms latency requirements at scale
+|===
+
+== The Cost Perspective
+
+Consider a team deploying an HR assistant like the one in this lab:
+
+* *GPU path:* Procure NVIDIA A100 or H100 hardware, set up GPU operator, configure node affinity, manage GPU drivers. Timeline: weeks to months. Cost: thousands per month in hardware and cloud spend.
+* *CPU path:* Deploy on existing {intel_platform} infrastructure. Use the same OpenShift cluster that runs your other applications. Timeline: the Helm install you ran in Module 2. Additional hardware cost: zero.
+
+For a 1.1B parameter model serving a small team, the CPU path delivers the same functionality at a fraction of the complexity and cost.
+
+== Verify Resource Usage
+
+Check how much CPU and memory the vLLM server is consuming:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc adm top pods -n {project_name}
+----
+
+Note the CPU and memory usage for the vLLM pod. A 1.1B model typically uses 2-4 GB of memory and moderate CPU when actively serving requests.
+
+== Checkpoint
+
+At this point you have:
+
+* [x] Understood the enterprise case for CPU-based model serving
+* [x] Checked for Intel-specific hardware optimizations (AVX-512, AMX)
+* [x] Reviewed the decision framework for CPU vs GPU workloads
+* [x] Examined actual resource usage of the vLLM server on CPU
+
+Proceed to xref:07-conclusion.adoc[Module 7: Conclusion] to wrap up the lab.

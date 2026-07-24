@@ -1,0 +1,8 @@
+* xref:index.adoc[Welcome]
+* xref:01-accessing-cluster.adoc[1. Accessing the Cluster]
+* xref:02-deploy-quickstart.adoc[2. Deploy the HR Assistant]
+* xref:03-explore-anythingllm.adoc[3. Explore the AI Workbench]
+* xref:04-rag-documents.adoc[4. Chat with HR Documents]
+* xref:05-playground.adoc[5. Test the Model Playground]
+* xref:06-intel-story.adoc[6. The Intel Xeon Story]
+* xref:07-conclusion.adoc[7. Conclusion]
