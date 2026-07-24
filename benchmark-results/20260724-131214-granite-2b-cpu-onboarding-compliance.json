@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "latency": 8.12,
+  "content": "1. **Know Your Customer (KYC) and Anti-Money Laundering (AML) Compliance**: This is a fundamental requirement for all banking institutions. During the onboarding process, you must verify the identity of the new hire using reliable documentation such as passports, driver's licenses, or national ID cards. This process should also include checking the individual's name, date of birth, and address against the databases used for KYC and AML purposes.\n\n2. **Financial Institution Due Diligence (FI-DD)**: This involves assessing the financial background of the individual, including their financial history, credit reports, and any potential red flags. This helps in identifying high-risk individuals or entities that may pose a risk to the bank's reputation or financial stability.\n\n3. **Criminal Background Checks**: Depending on the role, a thorough criminal background check may be necessary. This is especially true for positions involving direct contact with customers, handling sensitive financial information, or managing significant funds.\n\n4. **Employment Eligibility Verification**: Ensure that the new hire is legally authorized to work in the country where the bank operates. This is typically done",
+  "prompt_tokens": 54,
+  "completion_tokens": 256,
+  "tool_calls": [],
+  "label": "onboarding-compliance",
+  "keyword_score": 0.6,
+  "keywords_found": [
+    "compliance",
+    "onboarding",
+    "KYC"
+  ],
+  "keywords_expected": [
+    "compliance",
+    "onboarding",
+    "regulatory",
+    "KYC",
+    "training"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

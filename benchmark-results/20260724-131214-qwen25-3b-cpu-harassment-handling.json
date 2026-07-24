@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "latency": 9.81,
+  "content": "Handling a workplace harassment complaint in the financial services industry involves following a structured and thorough process to ensure compliance with relevant laws and regulations. Here\u2019s a step-by-step guide:\n\n### 1. Establish a Clear Policy\nEnsure that your organization has a clear, written policy on harassment that is accessible to all employees. This policy should outline what constitutes harassment, how complaints will be handled, and the consequences of such behavior.\n\n### 2. Receive and Document the Complaint\n- **Prompt Response:** Ensure that the complaint is received promptly and documented accurately. The documentation should include the date, time, location, and any witnesses.\n- **Confidentiality:** Maintain confidentiality as much as possible to protect the complainant and the accused. However, it's important to balance this with the need to investigate the complaint thoroughly.\n\n### 3. Investigate Promptly and Thoroughly\n- **Independent Investigation:** Have an independent third party conduct the investigation if possible. This can help maintain objectivity and credibility.\n- **Interviews:** Conduct interviews with the complainant, the accused, and any witnesses. Ensure that these interviews are conducted in a private setting and that the interviewers are trained to elicit accurate information without leading questions.\n- **Evidence Collection:** Collect all relevant evidence, including",
+  "prompt_tokens": 47,
+  "completion_tokens": 256,
+  "tool_calls": [],
+  "label": "harassment-handling",
+  "keyword_score": 0.6,
+  "keywords_found": [
+    "investigation",
+    "confidential",
+    "policy"
+  ],
+  "keywords_expected": [
+    "investigation",
+    "confidential",
+    "policy",
+    "report",
+    "HR"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

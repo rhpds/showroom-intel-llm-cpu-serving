@@ -1,0 +1,25 @@
+{
+  "success": true,
+  "latency": 7.65,
+  "content": "To maintain FINRA compliance, a banking institution must keep detailed training records for all registered representatives and associated personnel. These records should include:\n\n\n1. **Training Logs**: Documentation of all required FINRA training sessions attended by each employee, including the date, time, and content of the training.\n\n2. **Certification Records**: Proof of completion of FINRA's Series 7 and Series 63 exams, along with any other relevant certifications.\n\n3. **Supervisory Training Records**: Records of training provided to supervisors and managers, ensuring they are equipped to oversee compliance and ethical conduct.\n\n4. **Continuing Education**: Records of continuing education courses completed by registered representatives, including the course content, provider, and date of completion.\n\n5. **Compliance Updates**: Documentation of any updates to FINRA rules and regulations that the institution has provided to its employees, along with evidence of their understanding and acknowledgment of these updates.\n\n\nThese records must be kept for a minimum of three years from the date of the training or the date the employee leaves",
+  "prompt_tokens": 48,
+  "completion_tokens": 256,
+  "tool_calls": [],
+  "label": "finra-training",
+  "keyword_score": 0.8,
+  "keywords_found": [
+    "FINRA",
+    "training",
+    "records",
+    "continuing education"
+  ],
+  "keywords_expected": [
+    "FINRA",
+    "training",
+    "records",
+    "continuing education",
+    "registration"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

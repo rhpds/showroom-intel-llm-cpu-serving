@@ -1,0 +1,44 @@
+# Benchmark config for llm-cpu-serving showroom
+# Used by: quickstart-to-showroom/scripts/benchmark-quickstart.sh
+
+quickstart: llm-cpu-serving
+use_case: HR compliance chatbot for banking and securities
+max_tokens: 256
+
+system_prompt: >
+  You are an HR compliance assistant for a banking institution.
+  Provide specific, actionable guidance grounded in financial
+  services regulations.
+
+models:
+  - id: granite-2b-cpu
+    endpoint: https://granite-2b-cpu-external-llm-hosting.apps.ocp-rac-maas.rs-dfw3.infra.demo.redhat.com/v1
+  - id: phi3-mini-cpu
+    endpoint: https://phi3-mini-cpu-external-llm-hosting.apps.ocp-rac-maas.rs-dfw3.infra.demo.redhat.com/v1
+  - id: qwen25-3b-cpu
+    endpoint: https://qwen25-3b-cpu-external-llm-hosting.apps.ocp-rac-maas.rs-dfw3.infra.demo.redhat.com/v1
+
+test_prompts:
+  - label: onboarding-compliance
+    prompt: "What are the key compliance requirements for employee onboarding in banking?"
+    expected_keywords: [compliance, onboarding, regulatory, KYC, training]
+
+  - label: harassment-handling
+    prompt: "How should I handle a workplace harassment complaint in financial services?"
+    expected_keywords: [investigation, confidential, policy, report, HR]
+
+  - label: finra-training
+    prompt: "What training records must we maintain for FINRA compliance?"
+    expected_keywords: [FINRA, training, records, continuing education, registration]
+
+  - label: termination-steps
+    prompt: "List five steps for conducting a compliant employee termination."
+    expected_keywords: [documentation, notice, final pay, benefits, exit interview]
+
+  - label: accuracy-vacation
+    prompt: >
+      Based on this company policy: Employees accrue 15 vacation days per year
+      for the first 5 years, increasing to 20 days after year 5. How many
+      vacation days does an employee with 3 years of tenure get?
+    expected_answer: "15"
+    expected_keywords: [15, days, year]

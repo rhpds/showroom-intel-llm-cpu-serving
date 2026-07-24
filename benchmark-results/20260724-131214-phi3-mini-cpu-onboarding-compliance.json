@@ -1,0 +1,26 @@
+{
+  "success": true,
+  "latency": 7.69,
+  "content": "The key compliance requirements for employee onboarding in banking include:\n\n\n1. **Know Your Customer (KYC) and Anti-Money Laundering (AML) Training**: Employees must be trained on KYC and AML regulations to ensure they understand how to identify and report suspicious activities.\n\n\n2. **Data Protection and Privacy**: Adherence to data protection laws such as GDPR or CCPA is crucial. Employees should be trained on handling customer data securely and maintaining confidentiality.\n\n\n3. **Financial Crimes Compliance**: Employees must be familiar with the bank's policies and procedures for compliance with financial crimes laws, including the Bank Secrecy Act (BSA) and the USA PATRIOT Act.\n\n\n4. **Regulatory Reporting**: Training on the proper procedures for regulatory reporting, including the timely filing of Suspicious Activity Reports (SARs) and Currency Transaction Reports (CTRs).\n\n\n5. **Fair Lending Practices**: Employees should understand the",
+  "prompt_tokens": 51,
+  "completion_tokens": 256,
+  "tool_calls": [],
+  "label": "onboarding-compliance",
+  "keyword_score": 1.0,
+  "keywords_found": [
+    "compliance",
+    "onboarding",
+    "regulatory",
+    "KYC",
+    "training"
+  ],
+  "keywords_expected": [
+    "compliance",
+    "onboarding",
+    "regulatory",
+    "KYC",
+    "training"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

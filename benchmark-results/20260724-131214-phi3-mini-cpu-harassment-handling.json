@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "latency": 7.67,
+  "content": "To handle a workplace harassment complaint in financial services, follow these steps:\n\n\n1. **Immediate Action**: If you witness harassment, intervene immediately to stop the behavior.\n\n2. **Documentation**: Encourage the complainant to document the incidents, including dates, times, and any witnesses.\n\n3. **Confidentiality**: Assure the complainant that their report will be kept confidential to the extent possible.\n\n4. **Reporting Procedure**: Inform the complainant about the bank's internal procedures for reporting harassment.\n\n5. **Investigation**: Initiate a prompt, thorough, and impartial investigation into the complaint.\n\n6. **No Retaliation**: Ensure that the complainant and any witnesses are protected from retaliation.\n\n7. **Compliance with Laws**: Comply with all relevant laws, such as the Equal Employment Opportunity Commission (EEOC) guidelines in the U.S.\n\n8. **Training**: Provide training to all employees on harassment policies and prevent",
+  "prompt_tokens": 51,
+  "completion_tokens": 256,
+  "tool_calls": [],
+  "label": "harassment-handling",
+  "keyword_score": 0.6,
+  "keywords_found": [
+    "investigation",
+    "confidential",
+    "report"
+  ],
+  "keywords_expected": [
+    "investigation",
+    "confidential",
+    "policy",
+    "report",
+    "HR"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

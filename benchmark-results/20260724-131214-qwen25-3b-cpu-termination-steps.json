@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "latency": 9.83,
+  "content": "Conducting an employee termination in a way that complies with financial services regulations is crucial to maintaining the integrity of your organization and protecting both your employees and your institution. Here are five key steps to ensure compliance:\n\n1. **Documentation and Compliance Review**: Before any termination occurs, review all relevant policies, procedures, and applicable laws related to employment terminations. This includes federal and state labor laws, as well as any specific regulations or guidelines from regulatory bodies such as the Consumer Financial Protection Bureau (CFPB) or the Office of the Comptroller of the Currency (OCC). Ensure that you have a thorough understanding of what constitutes a fair and lawful termination.\n\n2. **Legal Consultation**: Engage with legal counsel who specializes in financial services to review the termination process. They can provide guidance on how to handle sensitive information, protect against potential discrimination claims, and ensure that all actions taken during the termination process comply with legal requirements. Legal advice can also help in drafting clear and concise termination letters and ensuring that all necessary documentation is properly handled.\n\n3. **Fair and Reasonable Notice**: Provide the employee with a reasonable notice period before the termination. This notice should be given in writing and should include the reason for the termination, if known, and the date of the termination",
+  "prompt_tokens": 45,
+  "completion_tokens": 256,
+  "tool_calls": [],
+  "label": "termination-steps",
+  "keyword_score": 0.4,
+  "keywords_found": [
+    "documentation",
+    "notice"
+  ],
+  "keywords_expected": [
+    "documentation",
+    "notice",
+    "final pay",
+    "benefits",
+    "exit interview"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

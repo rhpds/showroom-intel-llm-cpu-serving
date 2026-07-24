@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "latency": 2.67,
+  "content": "According to the company policy, employees accrue 15 vacation days per year for the first 5 years of tenure. Since the employee in question has only 3 years of tenure, they would accrue 15 vacation days per year. Therefore, the employee with 3 years of tenure gets 15 days x 3 years = 45 vacation days.",
+  "prompt_tokens": 91,
+  "completion_tokens": 85,
+  "tool_calls": [],
+  "label": "accuracy-vacation",
+  "keyword_score": 1.0,
+  "keywords_found": [
+    15,
+    "days",
+    "year"
+  ],
+  "keywords_expected": [
+    15,
+    "days",
+    "year"
+  ],
+  "accuracy_check": true,
+  "expected_answer": "15"
+}

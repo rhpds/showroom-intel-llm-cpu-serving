@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "latency": 8.13,
+  "content": "1. **Review Relevant Regulations and Policies**: Before initiating any termination, ensure you are thoroughly familiar with all applicable laws and your bank's specific policies. This includes the U.S. Department of Labor's guidelines on wrongful termination, the Americans with Disabilities Act (ADA), and any state-specific employment laws. Also, review your bank's employee handbook and termination procedures.\n\n2. **Document Everything**: Maintain detailed, accurate records of the termination process. This includes the reason for termination, the date, the employee's acknowledgment of the termination, and any communications with the employee. Document all interactions with HR, legal, and management teams involved in the process.\n\n3. **Communicate Clearly and Promptly**: Notify the employee in writing of the termination, outlining the specific reasons and the date of termination. This should be done in a respectful and professional manner, adhering to your bank's communication protocols. Ensure the employee understands their rights, including any severance pay or benefits they may be entitled to, as per your company's policies and applicable laws.\n\n4. **Separation Process**: After the formal notification, manage the employee's access to facilities, systems",
+  "prompt_tokens": 51,
+  "completion_tokens": 256,
+  "tool_calls": [],
+  "label": "termination-steps",
+  "keyword_score": 0.2,
+  "keywords_found": [
+    "benefits"
+  ],
+  "keywords_expected": [
+    "documentation",
+    "notice",
+    "final pay",
+    "benefits",
+    "exit interview"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

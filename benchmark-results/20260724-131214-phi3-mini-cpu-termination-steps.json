@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "latency": 5.85,
+  "content": "1. Review the employment contract and company policies: Ensure that the termination is in line with the terms of the employment contract and the company's policies.\n\n2. Document performance issues: Keep a record of any performance issues, warnings, or disciplinary actions taken against the employee.\n\n3. Conduct a termination meeting: Schedule a meeting with the employee to discuss the termination. Be clear and concise about the reasons for termination and provide the employee with an opportunity to ask questions.\n\n4. Provide a termination letter: Prepare a termination letter that outlines the reasons for termination, the effective date, and any final pay or benefits owed to the employee.\n\n5. Follow up with HR and legal counsel: Consult with HR and legal counsel to ensure that the termination process is compliant with all relevant laws and regulations.",
+  "prompt_tokens": 49,
+  "completion_tokens": 195,
+  "tool_calls": [],
+  "label": "termination-steps",
+  "keyword_score": 0.4,
+  "keywords_found": [
+    "final pay",
+    "benefits"
+  ],
+  "keywords_expected": [
+    "documentation",
+    "notice",
+    "final pay",
+    "benefits",
+    "exit interview"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

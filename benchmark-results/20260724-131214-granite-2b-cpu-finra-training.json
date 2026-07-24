@@ -1,0 +1,25 @@
+{
+  "success": true,
+  "latency": 7.83,
+  "content": "In the context of Financial Industry Regulatory Authority (FINRA) compliance for a banking institution, the following training records should be maintained:\n\n1. **Initial Series 7 and Series 63 Examination Passes**: These are the foundational exams for broker-dealers and their associated persons. You must keep records of when each individual passed these exams.\n\n2. **Continuing Education (CE) Records**: FINRA requires that all associated persons complete a certain number of CE hours each year. You should maintain records of the courses taken, the dates of completion, and the hours earned.\n\n3. **Ethics in Person Sales Supervision**: If you supervise individuals who engage in person-to-person sales, you must ensure they receive appropriate supervision. Records should include the names of supervised individuals, the dates of supervision, and the nature of the supervision.\n\n4. **Anti-Money Laundering (AML) Training**: Given the banking nature of your institution, AML training is crucial. You should document the dates of AML training sessions, the trainers, and the specific AML regulations covered.\n\n5. **",
+  "prompt_tokens": 51,
+  "completion_tokens": 256,
+  "tool_calls": [],
+  "label": "finra-training",
+  "keyword_score": 0.8,
+  "keywords_found": [
+    "FINRA",
+    "training",
+    "records",
+    "continuing education"
+  ],
+  "keywords_expected": [
+    "FINRA",
+    "training",
+    "records",
+    "continuing education",
+    "registration"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

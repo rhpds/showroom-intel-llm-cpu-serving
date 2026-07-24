@@ -1,0 +1,26 @@
+{
+  "success": true,
+  "latency": 10.32,
+  "content": "Employee onboarding in banking is a critical process that involves ensuring new hires comply with various regulatory and internal policies. Here are key compliance requirements to consider during the onboarding process:\n\n### 1. **Compliance Documentation**\n   - **Background Checks:** Conduct thorough background checks as required by law. This includes criminal history checks, credit checks, and verification of educational credentials.\n   - **Financial Crime Screening:** Implement systems to screen against sanctions lists, terrorist watchlists, and other financial crime databases.\n\n### 2. **Regulatory Training**\n   - **Anti-Money Laundering (AML) Training:** Ensure all new employees receive AML training that covers identifying suspicious activity, understanding customer due diligence requirements, and recognizing red flags.\n   - **Know Your Customer (KYC) Requirements:** Train employees on KYC procedures, including document verification, risk assessment, and ongoing monitoring.\n   - **Privacy Laws:** Provide training on data protection laws such as GDPR, CCPA, or other relevant privacy regulations depending on the jurisdiction.\n   - **Banking Regulations:** Offer training on specific banking regulations, such as Basel III, Dodd-Frank Act, and other international banking standards.\n\n### 3. **Internal Policies and Procedures**\n   - **Code of Conduct:** Ensure new employees",
+  "prompt_tokens": 48,
+  "completion_tokens": 256,
+  "tool_calls": [],
+  "label": "onboarding-compliance",
+  "keyword_score": 1.0,
+  "keywords_found": [
+    "compliance",
+    "onboarding",
+    "regulatory",
+    "KYC",
+    "training"
+  ],
+  "keywords_expected": [
+    "compliance",
+    "onboarding",
+    "regulatory",
+    "KYC",
+    "training"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

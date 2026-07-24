@@ -1,0 +1,26 @@
+{
+  "success": true,
+  "latency": 8.17,
+  "content": "Handling a workplace harassment complaint in a financial services institution requires a thorough, confidential, and compliant approach. Here's a step-by-step guide:\n\n1. **Establish a Clear Policy**: Ensure your organization has a comprehensive anti-harassment policy that aligns with the U.S. Equal Employment Opportunity Commission (EEOC) guidelines. This policy should define harassment, outline prohibited behaviors, and specify the reporting process.\n\n2. **Confidential Reporting**: Encourage employees to report incidents confidentially to a designated HR representative or the compliance officer. This could be done through a hotline, email, or a secure online portal.\n\n3. **Investigation**: Upon receiving a complaint, initiate a thorough, impartial, and timely investigation. This should involve interviewing the complainant, the accused, and any witnesses. Document all interactions and findings meticulously.\n\n4. **EEOC Guidelines**: Follow the EEOC's guidelines for investigating harassment claims. This includes not retaliating against the complainant, maintaining confidentiality, and promptly resolving the issue.",
+  "prompt_tokens": 56,
+  "completion_tokens": 256,
+  "tool_calls": [],
+  "label": "harassment-handling",
+  "keyword_score": 1.0,
+  "keywords_found": [
+    "investigation",
+    "confidential",
+    "policy",
+    "report",
+    "HR"
+  ],
+  "keywords_expected": [
+    "investigation",
+    "confidential",
+    "policy",
+    "report",
+    "HR"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}

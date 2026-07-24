@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "latency": 4.9,
+  "content": "According to the company policy, an employee with 3 years of tenure would accrue 15 vacation days per year. Therefore, over the course of a year, they would have earned 15 days (3 years * 5 days per year). This means that after the first year, they would have 15 days of vacation time available.\n\nHowever, it's important to note that this calculation is based solely on the tenure-based accrual rate. Other factors such as hiring date, leave carryover policies, or any specific company leave accrual rules may also apply. It's always crucial to verify these details with the HR department or the specific leave policy of the banking institution.",
+  "prompt_tokens": 95,
+  "completion_tokens": 158,
+  "tool_calls": [],
+  "label": "accuracy-vacation",
+  "keyword_score": 1.0,
+  "keywords_found": [
+    15,
+    "days",
+    "year"
+  ],
+  "keywords_expected": [
+    15,
+    "days",
+    "year"
+  ],
+  "accuracy_check": true,
+  "expected_answer": "15"
+}

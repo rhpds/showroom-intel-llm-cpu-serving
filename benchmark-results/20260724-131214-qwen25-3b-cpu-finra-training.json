@@ -1,0 +1,20 @@
+{
+  "success": false,
+  "latency": 40.35,
+  "content": "<urlopen error [Errno 60] Operation timed out>",
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "tool_calls": [],
+  "label": "finra-training",
+  "keyword_score": 0.0,
+  "keywords_found": [],
+  "keywords_expected": [
+    "FINRA",
+    "training",
+    "records",
+    "continuing education",
+    "registration"
+  ],
+  "accuracy_check": null,
+  "expected_answer": ""
+}
