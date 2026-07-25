@@ -1,0 +1,143 @@
+= Wire a RAG Frontend
+:navtitle: 4. Wire a RAG Frontend
+
+_Estimated time: 15 minutes_
+
+You have a model endpoint. Now you need a frontend that connects to it, adds document retrieval, and gives users a chat interface.
+In this module you will deploy AnythingLLM and wire it to the vLLM endpoint you created in Module 3.
+
+== What Is AnythingLLM?
+
+AnythingLLM is an open-source RAG workbench. It does not run the model -- it connects to any OpenAI-compatible endpoint and adds document chunking, embedding, vector storage (LanceDB), RAG retrieval, and a chat UI.
+The key point: AnythingLLM is a *client* of the vLLM endpoint, not a model server.
+
+== Create the Configuration Secret
+
+AnythingLLM reads its configuration from environment variables. You will create a Kubernetes Secret that tells it where to find the model.
+
+Examine each field:
+
+[source,yaml]
+----
+LLM_PROVIDER: localai                              # <1>
+LOCAL_AI_BASE_PATH: http://tinyllama-1b-cpu-predictor:8080/v1  # <2>
+LOCAL_AI_MODEL_PREF: TinyLlama/TinyLlama-1.1B-Chat-v1.0      # <3>
+LOCAL_AI_MODEL_TOKEN_LIMIT: "512"                  # <4>
+EMBEDDING_ENGINE: native                           # <5>
+VECTOR_DB: lancedb                                 # <6>
+----
+
+<1> *LLM_PROVIDER* -- tells AnythingLLM to use the "LocalAI" provider, which speaks the OpenAI-compatible protocol.
+<2> *LOCAL_AI_BASE_PATH* -- the internal KServe service URL. This is the Kubernetes service created by the InferenceService, reachable inside the cluster without a Route.
+<3> *LOCAL_AI_MODEL_PREF* -- the model name as reported by `/v1/models`.
+<4> *LOCAL_AI_MODEL_TOKEN_LIMIT* -- maximum tokens per response. Kept low because TinyLlama 1.1B has a 2048 token context and you need room for RAG context.
+<5> *EMBEDDING_ENGINE: native* -- AnythingLLM runs its own embedding model for document vectorization, independent of vLLM.
+<6> *VECTOR_DB: lancedb* -- uses the built-in LanceDB vector store. No external database needed.
+
+Create the Secret:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+cat <<'EOF' | oc apply -n {project_name} -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: anythingllm-config
+type: Opaque
+stringData:
+  LLM_PROVIDER: localai
+  LOCAL_AI_BASE_PATH: "http://tinyllama-1b-cpu-predictor:8080/v1"
+  LOCAL_AI_MODEL_PREF: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+  LOCAL_AI_MODEL_TOKEN_LIMIT: "512"
+  EMBEDDING_ENGINE: native
+  VECTOR_DB: lancedb
+EOF
+----
+
+== Deploy AnythingLLM
+
+Create the Deployment that runs the AnythingLLM workbench:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+cat <<'EOF' | oc apply -n {project_name} -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anythingllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: anythingllm
+  template:
+    metadata:
+      labels:
+        app: anythingllm
+    spec:
+      containers:
+        - name: anythingllm
+          image: ghcr.io/mintplex-labs/anything-llm:latest
+          ports:
+            - containerPort: 3001
+          envFrom:
+            - secretRef:
+                name: anythingllm-config
+          resources:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+EOF
+----
+
+== Create the Service and Route
+
+Expose AnythingLLM so you can access it from your browser:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc expose deployment anythingllm --port=3001 -n {project_name}
+oc create route edge anythingllm --service=anythingllm --port=3001 -n {project_name}
+----
+
+== Wait for the Pod
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc rollout status deployment/anythingllm -n {project_name} --timeout=120s
+----
+
+== Verify the Connection
+
+Get the AnythingLLM URL:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+export ANYTHINGLLM_URL=$(oc get route anythingllm -n {project_name} -o jsonpath='https://\{.spec.host\}')
+echo "AnythingLLM URL: $\{ANYTHINGLLM_URL\}"
+----
+
+Open that URL in your browser. Complete the initial setup wizard -- select the existing LLM configuration (it will auto-detect the settings from the Secret).
+
+== Test the Wiring
+
+Once setup is complete, create a workspace called *HR Assistant* and send a basic prompt:
+
+----
+What is the role of an HR representative?
+----
+
+The response flows through this path:
+
+. You type a question in AnythingLLM
+. AnythingLLM sends it as a chat completion to `http://tinyllama-1b-cpu-predictor:8080/v1`
+. vLLM runs inference on {intel_platform} CPU
+. The response returns to AnythingLLM and displays in the chat
+
+This confirms end-to-end wiring. The model is answering from its training data only -- no documents are loaded yet. That comes in Module 5.
+
+[.next-nav]
+xref:05-load-documents.adoc[Next: Load and Chunk Documents -->]

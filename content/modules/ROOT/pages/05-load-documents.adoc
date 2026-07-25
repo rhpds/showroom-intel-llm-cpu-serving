@@ -1,0 +1,129 @@
+= Load and Chunk Documents
+:navtitle: 5. Load and Chunk Documents
+
+_Estimated time: 15 minutes_
+
+You have a model serving endpoint and a RAG workbench connected to it.
+But without documents, the model answers only from its training data.
+In this module you will load documents into AnythingLLM, understand how chunking and embedding work, and inspect the vector store.
+
+== The RAG Ingestion Pipeline
+
+Every RAG system transforms raw documents into searchable vectors. The pipeline has four steps:
+
+----
+Source document (web page, PDF, text)
+    --> [1] Parse: extract raw text
+    --> [2] Chunk: split into 256-512 token passages
+    --> [3] Embed: convert each chunk to a vector
+    --> [4] Store: save text + vector in the vector database
+----
+
+Each step matters. Parse badly and you get garbled text. Chunk too large and retrieval becomes imprecise. Chunk too small and you lose context.
+
+== Chunking and Embedding
+
+LLMs have a finite context window (2048 tokens for your TinyLlama configuration). *Chunking* splits documents into passages small enough to fit, while keeping each self-contained. AnythingLLM uses ~512-token chunks by default -- a good balance of precision and context for policy documents.
+
+*Embedding* converts each chunk into a vector (list of numbers) capturing its meaning. Similar text produces similar vectors, enabling semantic search. AnythingLLM uses a built-in embedding model (`EMBEDDING_ENGINE: native`), independent of vLLM.
+
+== Get the AnythingLLM API Key
+
+The AnythingLLM API requires an API key. Retrieve it from the running pod:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+export ANYTHINGLLM_URL=$(oc get route anythingllm -n {project_name} -o jsonpath='https://\{.spec.host\}')
+echo "AnythingLLM URL: $\{ANYTHINGLLM_URL\}"
+echo "Get your API key from: $\{ANYTHINGLLM_URL\}/settings/api-keys"
+----
+
+Open the settings page in your browser and generate an API key. Set it in your terminal:
+
+[source,bash,role="execute"]
+----
+export ANYTHINGLLM_API_KEY="your-api-key-here"
+----
+
+== Create a Workspace
+
+Create an HR Assistant workspace via the API:
+
+[source,bash,role="execute"]
+----
+ANYTHINGLLM_URL=$(oc get route anythingllm -n $(oc project -q) -o jsonpath='https://{.spec.host}')
+curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/workspace/new \
+  -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "hr-assistant"}' | python3 -m json.tool
+----
+
+== Load a Document via URL
+
+Load an HR compliance document from the web into the workspace:
+
+[source,bash,role="execute"]
+----
+ANYTHINGLLM_URL=$(oc get route anythingllm -n $(oc project -q) -o jsonpath='https://{.spec.host}')
+curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/document/create-link \
+  -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"link": "https://www.dol.gov/agencies/whd/fmla"}' | python3 -m json.tool
+----
+
+This fetches the page, parses the HTML into text, chunks the text into passages, embeds each chunk, and stores the vectors in LanceDB.
+
+== Embed the Document into the Workspace
+
+After uploading, embed the document so it is searchable:
+
+[source,bash,role="execute"]
+----
+ANYTHINGLLM_URL=$(oc get route anythingllm -n $(oc project -q) -o jsonpath='https://{.spec.host}')
+curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/workspace/hr-assistant/update-embeddings \
+  -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"adds": ["custom-documents/url-www.dol.gov-agencies-whd-fmla.json"]}' | python3 -m json.tool
+----
+
+== Verify the Loaded Documents
+
+Check the workspace document list:
+
+[source,bash,role="execute"]
+----
+ANYTHINGLLM_URL=$(oc get route anythingllm -n $(oc project -q) -o jsonpath='https://{.spec.host}')
+curl -s ${ANYTHINGLLM_URL}/api/v1/workspace/hr-assistant \
+  -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" | python3 -m json.tool
+----
+
+You should see the workspace with its document count and token statistics.
+
+== Load Additional Documents
+
+Load more documents to build a richer knowledge base. You can also use the AnythingLLM browser UI to upload PDFs or text files directly.
+
+Try adding another source:
+
+[source,bash,role="execute"]
+----
+ANYTHINGLLM_URL=$(oc get route anythingllm -n $(oc project -q) -o jsonpath='https://{.spec.host}')
+curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/document/create-link \
+  -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"link": "https://www.dol.gov/agencies/whd/overtime"}' | python3 -m json.tool
+----
+
+== What Happened Under the Hood
+
+When you loaded a document, AnythingLLM performed the full RAG ingestion pipeline:
+
+. *Fetched* the web page and extracted text content
+. *Chunked* the text into passages (default ~512 tokens each)
+. *Embedded* each chunk using the native embedding model
+. *Stored* the chunk text, vector, and metadata in LanceDB
+
+The quality of your RAG system depends directly on this pipeline. Good chunking with relevant documents produces accurate, grounded answers. Poor chunking or irrelevant documents produce noise.
+
+[.next-nav]
+xref:06-query-with-rag.adoc[Next: Query with RAG -->]

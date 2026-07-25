@@ -1,0 +1,137 @@
+= Deploy a Model on CPU
+:navtitle: 3. Deploy a Model on CPU
+
+_Estimated time: 15 minutes_
+
+You have a ServingRuntime that defines *how* to run vLLM on CPU.
+Now you will create an InferenceService that deploys TinyLlama 1.1B and makes it available as an OpenAI-compatible API endpoint.
+
+== The ModelCar Pattern
+
+The *ModelCar* pattern packages model weights as an OCI container image instead of downloading them from HuggingFace at startup. Benefits: fast startup (node-level image caching), reproducibility (pinned by digest), and air-gap support (works with a local registry).
+
+The TinyLlama weights are pre-packaged at `oci://quay.io/rh-aiservices-bu/tinyllama:1.0`.
+
+== Understand the InferenceService
+
+Read through the YAML before applying it:
+
+[source,yaml]
+----
+apiVersion: serving.kserve.io/v1alpha1
+kind: InferenceService
+metadata:
+  name: tinyllama-1b-cpu                                # <1>
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment      # <2>
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: vLLM                                       # <3>
+      runtime: vllm-cpu                                  # <4>
+      storageUri: oci://quay.io/rh-aiservices-bu/tinyllama:1.0  # <5>
+----
+
+<1> *name* -- becomes the Kubernetes service name. Other components will connect to `tinyllama-1b-cpu-predictor` on port 8080.
+<2> *RawDeployment* -- deploys as a standard Kubernetes Deployment rather than a Knative service. Simpler networking, no scale-to-zero complexity.
+<3> *modelFormat.name: vLLM* -- matches the `supportedModelFormats` entry in the ServingRuntime you created in Module 2.
+<4> *runtime: vllm-cpu* -- explicitly selects your ServingRuntime by name.
+<5> *storageUri* -- the OCI image containing TinyLlama 1.1B weights. The `oci://` prefix tells KServe to pull this as a container image.
+
+Notice what is *absent*: no GPU tolerations, no `nvidia.com/gpu` resource requests. This InferenceService runs entirely on CPU.
+
+== Create the InferenceService
+
+[source,bash,role="execute",subs="attributes+"]
+----
+cat <<'EOF' | oc apply -n {project_name} -f -
+apiVersion: serving.kserve.io/v1alpha1
+kind: InferenceService
+metadata:
+  name: tinyllama-1b-cpu
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-cpu
+      storageUri: oci://quay.io/rh-aiservices-bu/tinyllama:1.0
+EOF
+----
+
+== Watch the Pod Start
+
+Monitor the pod as it pulls the model weights and starts vLLM:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc get pods -n {project_name} -w
+----
+
+Press `Ctrl+C` once you see the predictor pod reach `Running` status. The startup sequence:
+
+. *Init container* pulls the ModelCar image (~2.2 GB of model weights)
+. *vLLM container* starts, loads the weights into memory, and initializes the CPU inference engine
+. The pod reports `Ready` when the model is loaded and the health endpoint responds
+
+[NOTE]
+====
+The first startup takes 3-5 minutes because the ModelCar image must be pulled from the registry. Subsequent restarts are faster due to node-level image caching.
+====
+
+== Verify the InferenceService
+
+Check that the InferenceService reports `READY = True`:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc get inferenceservice -n {project_name}
+----
+
+The `URL` column shows the external endpoint. The `READY` column must show `True` before proceeding.
+
+== Test the Model Endpoint
+
+First, get the model endpoint URL:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+export VLLM_URL=$(oc get route tinyllama-1b-cpu-predictor -n {project_name} -o jsonpath='https://\{.spec.host\}')
+echo "vLLM endpoint: $\{VLLM_URL\}"
+----
+
+List available models:
+
+[source,bash,role="execute"]
+----
+VLLM_URL=$(oc get route tinyllama-1b-cpu-predictor -n $(oc project -q) -o jsonpath='https://{.spec.host}')
+curl -s ${VLLM_URL}/v1/models | python3 -m json.tool
+----
+
+You should see `TinyLlama/TinyLlama-1.1B-Chat-v1.0` listed.
+
+== Send a Chat Completion
+
+Test the endpoint with a real prompt:
+
+[source,bash,role="execute"]
+----
+VLLM_URL=$(oc get route tinyllama-1b-cpu-predictor -n $(oc project -q) -o jsonpath='https://{.spec.host}')
+curl -s ${VLLM_URL}/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    "messages": [
+      {"role": "user", "content": "What is the capital of France? Answer in one sentence."}
+    ],
+    "max_tokens": 50
+  }' | python3 -m json.tool
+----
+
+Observe the response. The `usage` block shows token counts, and latency is a few seconds -- expected for CPU inference. You now have a working LLM endpoint on CPU, accessible via the standard OpenAI-compatible API.
+
+[.next-nav]
+xref:04-wire-rag-frontend.adoc[Next: Wire a RAG Frontend -->]

@@ -1,0 +1,128 @@
+= Observe CPU Inference
+:navtitle: 7. Observe CPU Inference
+
+_Estimated time: 10 minutes_
+
+You have a working CPU inference stack with RAG.
+In this module you will look under the hood -- checking metrics, resource usage, and understanding the tuning parameters that control performance.
+
+== Check vLLM Metrics
+
+vLLM exposes a Prometheus-compatible metrics endpoint. Query it directly:
+
+[source,bash,role="execute"]
+----
+VLLM_URL=$(oc get route tinyllama-1b-cpu-predictor -n $(oc project -q) -o jsonpath='https://{.spec.host}')
+curl -s ${VLLM_URL}/metrics | grep -E "^vllm:" | head -20
+----
+
+Key metrics to understand:
+
+[cols="1,2",options="header"]
+|===
+|Metric |What It Tells You
+
+|`vllm:num_requests_running`
+|How many requests are being processed right now. On CPU, this is typically 1.
+
+|`vllm:num_requests_waiting`
+|Requests queued behind the current one. High values mean you need more replicas.
+
+|`vllm:avg_generation_throughput_toks_per_s`
+|Tokens generated per second. This is your output speed -- expect 10-30 tok/s on CPU for a 1.1B model.
+
+|`vllm:avg_prompt_throughput_toks_per_s`
+|How fast the model processes input tokens. Prompt processing is faster than generation.
+|===
+
+== Check Pod Resource Usage
+
+See how much CPU and memory the vLLM pod is actually consuming:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc adm top pods -n {project_name}
+----
+
+Key observations:
+
+* *CPU usage* -- during active inference, expect 4-10 cores utilized. At idle, much lower.
+* *Memory* -- the TinyLlama 1.1B model in BF16 uses approximately 2.2 GB for weights, plus additional memory for the KV cache. Total pod memory should be 3-5 GB under load.
+
+== Check vLLM Server Logs
+
+The vLLM logs show startup information including which CPU features were detected:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc logs deployment/tinyllama-1b-cpu-predictor -n {project_name} | grep -i -E "avx|amx|cpu|dtype|model|loaded" | head -15
+----
+
+Look for:
+
+* Which instruction set extensions were detected (AMX, AVX-512)
+* The dtype in use (bfloat16)
+* Confirmation that the model loaded successfully
+* The maximum context length (2048 tokens)
+
+== Generate Load and Watch Metrics
+
+Send several requests in sequence to see how the metrics change:
+
+[source,bash,role="execute"]
+----
+VLLM_URL=$(oc get route tinyllama-1b-cpu-predictor -n $(oc project -q) -o jsonpath='https://{.spec.host}')
+for i in 1 2 3; do
+  echo "--- Request $i ---"
+  time curl -s ${VLLM_URL}/v1/chat/completions \
+    -H "Content-Type: application/json" \
+    -d '{
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "messages": [{"role": "user", "content": "List three benefits of CPU inference."}],
+      "max_tokens": 100
+    }' | python3 -c "import sys,json; r=json.load(sys.stdin); print(f'Tokens: {r[\"usage\"][\"completion_tokens\"]}')"
+done
+----
+
+After the requests complete, check the metrics again:
+
+[source,bash,role="execute"]
+----
+VLLM_URL=$(oc get route tinyllama-1b-cpu-predictor -n $(oc project -q) -o jsonpath='https://{.spec.host}')
+curl -s ${VLLM_URL}/metrics | grep -E "throughput|requests_total|running"
+----
+
+== Understand the Tuning Tradeoffs
+
+The ServingRuntime you created in Module 2 has three parameters that directly affect performance:
+
+[cols="1,2,2",options="header"]
+|===
+|Parameter |Effect of Increasing |Effect of Decreasing
+
+|`--max-model-len` (2048)
+|Longer context window, more memory, slower prefill
+|Shorter context, less memory, faster prefill
+
+|CPU core count (8-12)
+|More parallelism, higher throughput
+|Less parallelism, but sufficient for low concurrency
+
+|`--dtype bfloat16`
+|Uses AMX hardware path (fastest on Sapphire Rapids+)
+|float32 would be slower and use 2x memory
+|===
+
+For a RAG use case with short document chunks and low concurrency, the current settings are well-tuned. If you needed higher throughput, you would add replicas rather than increase per-pod resources.
+
+== CPU Inference Performance Expectations
+
+Be realistic about what CPU inference delivers:
+
+* *Throughput* -- 10-30 tokens per second for a 1.1B model. Adequate for interactive single-user or small-team use.
+* *Latency* -- 2-10 seconds per response depending on output length. Acceptable for a Q&A assistant, not for real-time chat at scale.
+* *Concurrency* -- a single pod handles 1-2 concurrent requests well. Beyond that, queue times increase. Scale horizontally with replicas.
+* *Sweet spot* -- small models (under 3B), short outputs, low concurrency, cost-sensitive environments.
+
+[.next-nav]
+xref:08-conclusion.adoc[Next: Conclusion -->]

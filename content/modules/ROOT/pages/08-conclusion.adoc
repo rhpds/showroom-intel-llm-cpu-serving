@@ -1,0 +1,108 @@
+= Conclusion
+:navtitle: 8. Conclusion
+
+_Congratulations._ You built a CPU inference stack from scratch.
+
+== What You Built
+
+Over the course of this lab you constructed every component by hand:
+
+[cols="1,2,2",options="header"]
+|===
+|Layer |What You Built |How
+
+|*Serving Runtime*
+|A KServe ServingRuntime configured for {intel_platform} CPU with vLLM, BF16 dtype targeting AMX, and tool calling enabled
+|`oc apply` with inline YAML -- you understood every field
+
+|*Model Endpoint*
+|A KServe InferenceService serving TinyLlama 1.1B via the ModelCar OCI pattern -- no GPU tolerations
+|`oc apply` with inline YAML -- you tested it with curl
+
+|*RAG Frontend*
+|AnythingLLM wired to the vLLM endpoint via a Kubernetes Secret, with native embeddings and LanceDB
+|Created the Secret, Deployment, Service, and Route
+
+|*Document Pipeline*
+|Documents loaded, chunked, embedded, and stored in the vector database
+|Used the AnythingLLM API to ingest and embed documents
+
+|*RAG Queries*
+|Questions answered with retrieved context -- compared RAG vs direct model output
+|Queried through AnythingLLM and directly through vLLM
+
+|*Observability*
+|vLLM metrics checked, resource usage measured, tuning tradeoffs understood
+|Queried Prometheus metrics and `oc adm top pods`
+|===
+
+== The Key Insights
+
+* *CPU inference is viable for small models at low concurrency.* TinyLlama 1.1B runs on standard {intel_platform} servers with no GPU. For a team-sized HR assistant, this is all you need.
+* *KServe separates the how from the what.* ServingRuntime defines how to run models. InferenceService defines which model to deploy. This separation makes model serving manageable at scale.
+* *ModelCar eliminates cold start pain.* Model weights as OCI images mean fast, reproducible, air-gap-friendly deployments.
+* *RAG does not make the model smarter -- it gives the model better information.* The same 1.1B model gives materially different answers with and without retrieved context.
+* *Know your limits.* CPU inference works for small models, short outputs, and low concurrency. Know when to scale horizontally and when to move to GPU.
+
+== Architecture Recap
+
+----
+User
+  |
+  v
+AnythingLLM (RAG workbench)
+  |                    \
+  | chat completions    \ vector retrieval
+  v                      v
+vLLM on CPU            LanceDB
+(TinyLlama 1.1B)       (embedded chunks)
+  |
+  v
+Intel Xeon (AMX / AVX-512)
+----
+
+Every component serves a specific purpose. Remove any one and the system breaks in a predictable way.
+
+== Next Steps
+
+Now that you understand how to build a CPU inference stack, consider:
+
+* *Try a larger model* -- swap TinyLlama for a 3B or 7B model by updating the InferenceService `storageUri` and resource limits. Observe the latency-quality tradeoff.
+* *Add your own documents* -- upload your organization's actual HR policies, handbooks, or regulatory documents into AnythingLLM.
+* *Scale for teams* -- add replicas to the InferenceService for higher concurrency. Add authentication to AnythingLLM for multi-user access.
+* *Explore Llama Stack* -- the quickstart also includes a Llama Stack service for agentic workflows and tool calling.
+
+== Cleanup
+
+Remove all resources you created:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc delete inferenceservice tinyllama-1b-cpu -n {project_name}
+oc delete servingruntime vllm-cpu -n {project_name}
+oc delete deployment anythingllm -n {project_name}
+oc delete svc anythingllm -n {project_name}
+oc delete route anythingllm -n {project_name}
+oc delete secret anythingllm-config -n {project_name}
+----
+
+Or remove the entire project:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc delete project {project_name}
+----
+
+== Resources
+
+* Quickstart source code: {quickstart_repo}
+* AI Quickstart catalog: https://docs.redhat.com/en/learn/ai-quickstarts
+* Red Hat OpenShift AI: https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-ai
+* vLLM documentation: https://docs.vllm.ai[vLLM docs^]
+* KServe documentation: https://kserve.github.io/website[KServe docs^]
+
+== Powered By
+
+*Red Hat OpenShift AI* running on *{intel_platform}* processors.
+
+All inference workloads in this lab were served on {intel_platform}, demonstrating that enterprise AI does not require dedicated GPU hardware.

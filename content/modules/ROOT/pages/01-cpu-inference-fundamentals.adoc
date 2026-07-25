@@ -1,0 +1,129 @@
+= CPU Inference Fundamentals
+:navtitle: 1. CPU Inference Fundamentals
+
+_Estimated time: 15 minutes_
+
+Before you build anything, you need to understand *why* running LLMs on CPU works and when it is the right choice.
+This module is conceptual -- no deployment, no YAML. Just the foundation you need for the rest of the lab.
+
+== Why CPU Inference?
+
+Most enterprise data centers run on x86 processors. GPU hardware requires separate procurement, specialized cooling, higher power budgets, and driver management. For many AI workloads, CPU inference eliminates all of these barriers.
+
+The economics are straightforward:
+
+* *No additional hardware cost* -- inference runs on servers you already own
+* *No GPU procurement delays* -- GPU supply chains can add months to project timelines
+* *Standard infrastructure* -- same monitoring, networking, and security tooling
+* *Elastic scaling* -- scale model serving across the same OpenShift cluster that runs your other workloads
+
+== Intel Hardware Acceleration
+
+Modern {intel_platform} processors include instruction set extensions that accelerate neural network math:
+
+=== AMX (Advanced Matrix Extensions)
+
+Available on 4th Gen {intel_platform} Scalable (Sapphire Rapids) and later. AMX provides dedicated hardware for BF16 and INT8 matrix multiplication -- the core operation in transformer inference. Think of it as a small matrix engine built into the CPU.
+
+When vLLM starts with `--dtype bfloat16`, it targets the AMX code path. This is why that flag matters -- it is not just a precision choice, it selects the fastest hardware path available.
+
+=== AVX-512 VNNI
+
+Available on 3rd Gen {intel_platform} Scalable (Ice Lake) and later. AVX-512 provides 512-bit vector operations, and VNNI (Vector Neural Network Instructions) adds fused multiply-accumulate for int8 inference. Older than AMX but still significantly faster than baseline x86.
+
+== When CPU Inference Is the Right Choice
+
+[cols="1,2",options="header"]
+|===
+|Workload |Why CPU Works
+
+|*Small models (under 3B parameters)*
+|Model weights fit in system memory. Inference latency is acceptable for interactive use.
+
+|*Classification and entity extraction*
+|Short outputs (labels, entities) minimize generation time.
+
+|*RAG retrieval pipelines*
+|The retrieval step is I/O-bound. The generation step with a small LLM runs well on CPU.
+
+|*Embedding generation*
+|Batch embedding of documents for vector search is throughput-oriented, not latency-critical.
+
+|*Low-concurrency serving*
+|Teams of 10-50 users with intermittent queries.
+|===
+
+== When You Need GPU
+
+[cols="1,2",options="header"]
+|===
+|Workload |Why GPU Is Needed
+
+|*Large models (70B+ parameters)*
+|Model weights exceed practical CPU memory bandwidth.
+
+|*High-throughput batch generation*
+|Hundreds of concurrent requests require GPU parallelism.
+
+|*Vision and multimodal models*
+|Image processing pipelines benefit significantly from GPU acceleration.
+
+|*Real-time streaming at scale*
+|Sub-100ms latency requirements at high concurrency.
+|===
+
+== The TinyLlama 1.1B Model
+
+In this lab you will serve *TinyLlama 1.1B Chat v1.0* -- a 1.1 billion parameter model trained on 3 trillion tokens.
+
+Why this model for CPU inference:
+
+* *Size* -- at 1.1B parameters in BF16, the model weights are approximately 2.2 GB. This fits comfortably in L3 cache on modern {intel_platform} processors.
+* *Architecture* -- standard Llama architecture, so vLLM's optimized CPU kernels apply directly.
+* *Quality* -- sufficient for document Q&A, summarization, and classification tasks. Not suitable for complex reasoning or creative writing.
+* *Speed* -- at this size, CPU inference delivers usable latency (seconds, not minutes) for interactive use.
+
+== Check Your Cluster's CPU Capabilities
+
+Let's verify what hardware acceleration is available on your cluster nodes. This will tell you which code path vLLM will use.
+
+[source,bash,role="execute"]
+----
+NODE=$(oc get nodes -o jsonpath='{.items[0].metadata.name}')
+oc debug node/${NODE} -- chroot /host lscpu | grep -i -E "amx|avx512|vnni|model name" 2>/dev/null | head -10
+----
+
+Look for:
+
+* `amx_bf16` or `amx_int8` -- your cluster has AMX acceleration (best performance)
+* `avx512_vnni` -- your cluster has VNNI acceleration (good performance)
+* `avx512f` -- your cluster has baseline AVX-512 (adequate performance)
+
+[NOTE]
+====
+You do not need AMX for this lab to work. vLLM will use the best available instruction set automatically. AMX makes it faster, but AVX-512 is sufficient for a 1.1B model.
+====
+
+== Key Concepts for This Lab
+
+[cols="1,3",options="header"]
+|===
+|Concept |What It Means in This Lab
+
+|*ServingRuntime*
+|A KServe resource that defines *how* to run models -- the container image, startup flags, resource limits. You will create this in Module 2.
+
+|*InferenceService*
+|A KServe resource that deploys *which* model to serve using a given runtime. You will create this in Module 3.
+
+|*ModelCar*
+|An OCI container image that packages model weights. Instead of downloading from HuggingFace at startup, the weights are baked into a container image and pulled from a registry.
+
+|*RAG*
+|Retrieval-Augmented Generation -- searching documents first, then generating answers grounded in the retrieved content. You will build this in Modules 4-6.
+|===
+
+You now have the conceptual foundation. Time to build.
+
+[.next-nav]
+xref:02-serving-runtime.adoc[Next: Build a vLLM Serving Runtime -->]

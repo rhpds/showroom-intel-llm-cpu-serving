@@ -1,0 +1,154 @@
+= Build a vLLM Serving Runtime
+:navtitle: 2. Build a vLLM Serving Runtime
+
+_Estimated time: 15 minutes_
+
+A KServe *ServingRuntime* defines *how* to run models -- the container image, startup flags, and resource constraints.
+It does not deploy a model. Think of it as a template: "when someone asks to serve a vLLM model, use this container with these arguments."
+
+In this module you will create the ServingRuntime from scratch and understand every field.
+
+== Create the Project
+
+First, create a dedicated OpenShift project for your CPU inference stack:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc new-project {project_name}
+----
+
+Verify you are in the correct project:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc project
+----
+
+== Understand the ServingRuntime
+
+Before you apply anything, read through the YAML below. Every field is explained.
+
+[source,yaml]
+----
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-cpu                                    # <1>
+  annotations:
+    openshift.io/display-name: vLLM CPU ServingRuntime
+spec:
+  annotations:
+    prometheus.io/port: "8080"
+    prometheus.io/path: /metrics
+  multiModel: false                                  # <2>
+  supportedModelFormats:
+    - autoSelect: true
+      name: vLLM                                     # <3>
+  containers:
+    - name: kserve-container
+      image: registry.redhat.io/rhaii/vllm-cpu-rhel9:latest  # <4>
+      command:
+        - python
+        - -m
+        - vllm.entrypoints.openai.api_server
+      args:
+        - "--port=8080"
+        - "--model=/mnt/models"
+        - "--dtype=bfloat16"                         # <5>
+        - "--enable-auto-tool-choice"                # <6>
+        - "--tool-call-parser=hermes"
+        - "--max-model-len=2048"                     # <7>
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      resources:                                     # <8>
+        requests:
+          cpu: "8"
+          memory: 8Gi
+        limits:
+          cpu: "12"
+          memory: 12Gi
+----
+
+<1> *name* -- other resources reference this name when they want to use this runtime.
+<2> *multiModel: false* -- each pod serves exactly one model. This simplifies resource planning.
+<3> *supportedModelFormats* -- declares that this runtime handles the "vLLM" format. The InferenceService you create in Module 3 will match on this name.
+<4> *image* -- the Red Hat certified vLLM image built for CPU. This image includes Intel-optimized PyTorch and oneDNN backends that target AMX/AVX-512 automatically.
+<5> *--dtype=bfloat16* -- selects the AMX hardware path on supported {intel_platform} processors. On older CPUs without AMX, vLLM falls back to AVX-512 BF16 emulation.
+<6> *--enable-auto-tool-choice / --tool-call-parser=hermes* -- enables OpenAI-compatible function calling. The model can invoke tools defined in the API request.
+<7> *--max-model-len=2048* -- caps the context window at 2048 tokens. Larger windows consume more memory and slow inference. For a RAG use case with short document chunks, 2048 is sufficient.
+<8> *resources* -- CPU inference needs adequate cores. 8 cores requested, 12 limit. Memory must hold the model weights (~2.2 GB for TinyLlama BF16) plus KV cache.
+
+== Create the ServingRuntime
+
+Apply the resource to your project:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+cat <<'EOF' | oc apply -n {project_name} -f -
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: vllm-cpu
+  annotations:
+    openshift.io/display-name: vLLM CPU ServingRuntime
+spec:
+  annotations:
+    prometheus.io/port: "8080"
+    prometheus.io/path: /metrics
+  multiModel: false
+  supportedModelFormats:
+    - autoSelect: true
+      name: vLLM
+  containers:
+    - name: kserve-container
+      image: registry.redhat.io/rhaii/vllm-cpu-rhel9:latest
+      command:
+        - python
+        - -m
+        - vllm.entrypoints.openai.api_server
+      args:
+        - "--port=8080"
+        - "--model=/mnt/models"
+        - "--dtype=bfloat16"
+        - "--enable-auto-tool-choice"
+        - "--tool-call-parser=hermes"
+        - "--max-model-len=2048"
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      resources:
+        requests:
+          cpu: "8"
+          memory: 8Gi
+        limits:
+          cpu: "12"
+          memory: 12Gi
+EOF
+----
+
+== Verify the ServingRuntime
+
+Confirm it was created:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc get servingruntime -n {project_name}
+----
+
+You should see `vllm-cpu` listed. Inspect the details:
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc describe servingruntime vllm-cpu -n {project_name}
+----
+
+== What This Does Not Do
+
+The ServingRuntime is a *definition*, not a deployment. No pods are running yet. No model has been loaded.
+KServe separates the *how* (ServingRuntime) from the *what* (InferenceService) deliberately -- one runtime serves many models, and changing the image or flags updates all deployments that use it.
+
+In the next module, you will create an InferenceService that says: "Deploy TinyLlama 1.1B using the `vllm-cpu` runtime."
+
+[.next-nav]
+xref:03-deploy-model.adoc[Next: Deploy a Model on CPU -->]

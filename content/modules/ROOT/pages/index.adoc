@@ -1,71 +1,116 @@
-= Serve LLMs on Intel Xeon CPUs
+= Build a CPU Inference Stack from Scratch
+:navtitle: Welcome
 
-Welcome to the *HR Assistant for Financial Services* lab. In this hands-on workshop you will deploy a complete AI-powered HR assistant on Red Hat OpenShift AI -- running entirely on CPU, with no GPU hardware required.
+In this lab you will *build* a complete LLM inference and RAG system on {intel_platform} CPUs -- component by component.
+You will not deploy a Helm chart and click around.
+You will construct every Kubernetes resource, understand every configuration decision, and walk away knowing how to build CPU-based AI serving from scratch.
 
-== The Use Case
+== The Scenario
 
-Financial services firms face strict compliance requirements for employee onboarding, communications monitoring, and workplace conduct. HR teams must answer questions that span dozens of regulatory documents -- FINRA rules, internal policies, and federal labor guidelines.
+Your organization wants to serve an LLM internally without GPU hardware.
+The model must answer employee questions grounded in real documents -- an HR assistant backed by Retrieval-Augmented Generation.
+You will build this on the {intel_platform} processors already running in your OpenShift cluster.
 
-This quickstart deploys a Retrieval-Augmented Generation (RAG) system that helps HR representatives answer compliance questions accurately by grounding responses in authoritative source documents, rather than relying on a model's general knowledge alone.
+== What You Will Build
 
-== What You Will Learn
+By the end of this 90-minute lab, you will have constructed four components and wired them together:
 
-By the end of this lab you will understand how to:
-
-* *Deploy vLLM on CPU* -- serve the TinyLlama 1.1B model using vLLM's CPU runtime on {intel_platform} processors
-* *Use AnythingLLM for RAG* -- interact with a workbench UI that retrieves relevant HR documents before generating answers
-* *Test the Model Playground* -- access the model directly through the Red Hat OpenShift AI dashboard
-* *Understand CPU inference trade-offs* -- learn when CPU-based serving is the right choice for enterprise workloads
-
-== Architecture at a Glance
-
-The system has four components:
-
-[cols="1,3"]
+[cols="1,2,2",options="header"]
 |===
-| Component | Purpose
+|Component |What It Does |Technology
 
-| *vLLM on CPU*
-| Serves TinyLlama 1.1B using the KServe model serving runtime. Runs on {intel_platform} with no GPU.
+|*vLLM Serving Runtime*
+|Defines how to run LLMs on CPU inside OpenShift AI
+|KServe ServingRuntime + vLLM CPU image
 
-| *AnythingLLM*
-| RAG-enabled workbench UI. Retrieves HR compliance documents and includes them as context before querying the model.
+|*Model Endpoint*
+|Deploys TinyLlama 1.1B and serves it via an OpenAI-compatible API
+|KServe InferenceService + ModelCar OCI pattern
 
-| *Llama Stack*
-| Provides a standardized API layer for model interaction and tooling integration.
+|*RAG Frontend*
+|Connects a chat workbench to the model endpoint with document retrieval
+|AnythingLLM + LanceDB
 
-| *RAG Seed Job*
-| Pre-loads HR compliance documents from web URLs into the AnythingLLM vector store at deployment time.
+|*Document Pipeline*
+|Loads, chunks, and embeds documents into the vector store
+|AnythingLLM API + embedding model
+|===
+
+== Architecture
+
+----
+User
+  |
+  v
+AnythingLLM (RAG workbench)
+  |                    \
+  | chat completions    \ document retrieval
+  v                      v
+vLLM on CPU            LanceDB (vector store)
+(TinyLlama 1.1B)       (embedded chunks)
+  |
+  v
+Intel Xeon (AMX / AVX-512)
+----
+
+== Lab Structure
+
+[cols="1,2,1",options="header"]
+|===
+|Module |What You Do |Time
+
+|xref:01-cpu-inference-fundamentals.adoc[1. CPU Inference Fundamentals]
+|Learn why CPU inference works and when to use it
+|15 min
+
+|xref:02-serving-runtime.adoc[2. Build a vLLM Serving Runtime]
+|Create the KServe ServingRuntime that defines how models run on CPU
+|15 min
+
+|xref:03-deploy-model.adoc[3. Deploy a Model on CPU]
+|Deploy TinyLlama 1.1B via InferenceService and test the endpoint
+|15 min
+
+|xref:04-wire-rag-frontend.adoc[4. Wire a RAG Frontend]
+|Deploy AnythingLLM and connect it to the vLLM endpoint
+|15 min
+
+|xref:05-load-documents.adoc[5. Load and Chunk Documents]
+|Ingest documents, understand chunking and embedding
+|15 min
+
+|xref:06-query-with-rag.adoc[6. Query with RAG]
+|Ask questions with and without RAG, compare the results
+|15 min
+
+|xref:07-observe-cpu-inference.adoc[7. Observe CPU Inference]
+|Check metrics, resource usage, and tuning parameters
+|10 min
+
+|xref:08-conclusion.adoc[8. Conclusion]
+|Review what you built, clean up, next steps
+|5 min
 |===
 
 == Prerequisites
 
-* An OpenShift cluster provisioned through RHDP (Red Hat Demo Platform)
-* A modern web browser
-* Terminal access (provided in the right panel)
+* Access credentials for your OpenShift cluster (provided in the demo platform)
+* A terminal (the *Bastion* tab in the showroom)
+* No GPU hardware required -- that is the point
 
-== Time Estimate
+== Getting Started
 
-This lab takes approximately *60 minutes* to complete:
+Open the *Bastion* tab and log in to the cluster:
 
-[cols="1,2,1"]
-|===
-| Module | Topic | Time
+[source,bash,role="execute",subs="attributes+"]
+----
+oc login --insecure-skip-tls-verify \
+  -u {user} \
+  -p {password} \
+  {openshift_api_url}
+----
 
-| 1 | Accessing the Cluster | 5 min
-| 2 | Deploy the HR Assistant | 15 min
-| 3 | Explore the AI Workbench | 15 min
-| 4 | Chat with HR Documents | 15 min
-| 5 | Test the Model Playground | 10 min
-| 6 | The Intel Xeon Story | 5 min
-| 7 | Conclusion | 5 min
-|===
+You are ready. Start with the fundamentals.
 
-[NOTE]
-====
-Each module builds on the previous one. The deployment in Module 2 creates resources used throughout the remaining exercises, so work through them in order.
-====
-
-== Ready?
-
-When you are ready, proceed to xref:01-accessing-cluster.adoc[Module 1: Accessing the Cluster] to log into your OpenShift environment.
+[.next-nav]
+xref:01-cpu-inference-fundamentals.adoc[Next: CPU Inference Fundamentals -->]
