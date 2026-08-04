@@ -3,13 +3,40 @@
 
 _Estimated time: 15 minutes_
 
+In this module you will:
+
+* Understand why a RAG workbench is separate from the model server
+* Deploy AnythingLLM and connect it to the vLLM endpoint
+* Verify end-to-end connectivity from the chat UI to CPU inference
+
 You have a model endpoint. Now you need a frontend that connects to it, adds document retrieval, and gives users a chat interface.
 In this module you will deploy AnythingLLM and wire it to the vLLM endpoint you created in Module 3.
 
+== Know: Why Separate the Chat Layer from the Model?
+
+Your vLLM endpoint from Module 3 is a raw API: send JSON, get JSON back. No chat history, no document retrieval, no user interface. That is by design — the model server should do one thing well.
+
+A *RAG workbench* adds the layers that make the model useful to end users:
+
+* *Chat interface* — a browser-based UI for conversational interaction
+* *Document management* — upload, chunk, and embed documents
+* *Vector storage* — store and search document embeddings
+* *Retrieval pipeline* — find relevant documents before generating a response
+* *Conversation memory* — maintain context across multiple messages
+
+Separating these concerns means you can swap the model without touching the frontend, or replace the vector store without redeploying the model. For the HR assistant, this means you could upgrade from TinyLlama to a larger model later — AnythingLLM would not need to change.
+
 == What Is AnythingLLM?
 
-AnythingLLM is an open-source RAG workbench. It does not run the model -- it connects to any OpenAI-compatible endpoint and adds document chunking, embedding, vector storage (LanceDB), RAG retrieval, and a chat UI.
-The key point: AnythingLLM is a *client* of the vLLM endpoint, not a model server.
+AnythingLLM is an open-source RAG workbench. It does not run the model — it connects to any OpenAI-compatible endpoint and adds document chunking, embedding, vector storage (LanceDB), RAG retrieval, and a chat UI.
+
+In this lab, it serves three roles:
+
+. *LLM Client* — sends chat completion requests to vLLM over the OpenAI API
+. *Embedding Engine* — runs its own lightweight embedding model to vectorize documents (independent of vLLM)
+. *Vector Store* — stores document embeddings in LanceDB, an embedded vector database that requires no external infrastructure
+
+The key point: AnythingLLM is a *client* of the vLLM endpoint, not a model server. All inference happens on the {intel_platform} CPU via vLLM.
 
 == Create the Configuration Secret
 
@@ -110,6 +137,22 @@ oc create route edge anythingllm --service=anythingllm --port=3001 -n {project_n
 oc rollout status deployment/anythingllm -n {project_name} --timeout=120s
 ----
 
+=== Verify: Pod is Running
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc get pods -n {project_name} -l app=anythingllm
+----
+
+Expected output:
+
+----
+NAME                           READY   STATUS    RESTARTS   AGE
+anythingllm-xxxxx-xxxxx        1/1     Running   0          30s
+----
+
+If the pod is not running, check events: `oc describe deployment anythingllm -n {project_name}`.
+
 == Verify the Connection
 
 Get the AnythingLLM URL:
@@ -138,6 +181,37 @@ The response flows through this path:
 . The response returns to AnythingLLM and displays in the chat
 
 This confirms end-to-end wiring. The model is answering from its training data only -- no documents are loaded yet. That comes in Module 5.
+
+=== Verify: End-to-End Wiring
+
+You should see a response from the model in the AnythingLLM chat interface. The response will be a general answer based on the model's training data — it will not reference any specific HR documents yet.
+
+If you see an error like "Could not connect to LLM provider":
+
+. Check that the vLLM pod is still running: `oc get pods -n {project_name}`
+. Verify the service name: `oc get svc -n {project_name} | grep tinyllama`
+. Check the secret values: `oc get secret anythingllm-config -n {project_name} -o yaml`
+
+The internal URL `http://tinyllama-1b-cpu-predictor:8080/v1` must match the service name created by KServe in Module 3.
+
+=== Troubleshooting
+
+[cols="1,2",options="header"]
+|===
+|Symptom |Resolution
+
+|AnythingLLM UI shows "Could not connect to LLM provider"
+|The vLLM service name in the secret may be wrong. Verify with `oc get svc -n {project_name}` and check that `LOCAL_AI_BASE_PATH` matches.
+
+|AnythingLLM pod in `CrashLoopBackOff`
+|Check logs: `oc logs -l app=anythingllm -n {project_name}`. Common cause: the secret is missing or malformed.
+
+|Chat returns empty responses
+|The model may still be loading. Check vLLM pod status: `oc get pods -n {project_name}`. Also verify `LOCAL_AI_MODEL_PREF` matches the exact model name from `/v1/models`.
+
+|Route returns 503
+|The AnythingLLM pod may not be ready. Wait for the rollout to complete and retry.
+|===
 
 [.next-nav]
 xref:05-load-documents.adoc[Next: Load and Chunk Documents -->]

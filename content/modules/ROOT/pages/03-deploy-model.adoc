@@ -3,14 +3,39 @@
 
 _Estimated time: 15 minutes_
 
+In this module you will:
+
+* Learn how the ModelCar pattern packages model weights as OCI images
+* Deploy TinyLlama 1.1B as a KServe InferenceService on CPU
+* Test the model endpoint with the OpenAI-compatible API
+
 You have a ServingRuntime that defines *how* to run vLLM on CPU.
 Now you will create an InferenceService that deploys TinyLlama 1.1B and makes it available as an OpenAI-compatible API endpoint.
 
-== The ModelCar Pattern
+== Know: How Models Get to the Pod
 
-The *ModelCar* pattern packages model weights as an OCI container image instead of downloading them from HuggingFace at startup. Benefits: fast startup (node-level image caching), reproducibility (pinned by digest), and air-gap support (works with a local registry).
+Deploying an LLM requires getting model weights (often gigabytes of files) into a running container. There are three common patterns:
 
-The TinyLlama weights are pre-packaged at `oci://quay.io/rh-aiservices-bu/tinyllama:1.0`.
+[cols="1,2,2",options="header"]
+|===
+|Pattern |How It Works |Trade-offs
+
+|*HuggingFace Download*
+|Pod downloads weights from HuggingFace Hub on startup
+|Simple, but slow startup (minutes), requires internet access, not reproducible (model can change upstream)
+
+|*PVC Mount*
+|Weights stored on a PersistentVolumeClaim, mounted into the pod
+|Fast startup if pre-loaded, but requires storage provisioning and manual management
+
+|*ModelCar (OCI Image)*
+|Weights packaged as a container image, pulled like any other image
+|Fast restart (node-level caching), reproducible (pinned by digest), air-gap compatible
+|===
+
+This lab uses the *ModelCar* pattern. The TinyLlama 1.1B weights are pre-packaged at `oci://quay.io/rh-aiservices-bu/tinyllama:1.0`. When KServe creates the pod, it pulls this image in an init container, extracting the weights into `/mnt/models` before vLLM starts.
+
+The key benefit for production: when a pod restarts or scales, the node already has the image cached. Startup drops from minutes to seconds.
 
 == Understand the InferenceService
 
@@ -82,6 +107,22 @@ Press `Ctrl+C` once you see the predictor pod reach `Running` status. The startu
 The first startup takes 3-5 minutes because the ModelCar image must be pulled from the registry. Subsequent restarts are faster due to node-level image caching.
 ====
 
+=== Verify: Pod is Running
+
+[source,bash,role="execute",subs="attributes+"]
+----
+oc get pods -n {project_name} -l serving.kserve.io/inferenceservice=tinyllama-1b-cpu
+----
+
+Expected output:
+
+----
+NAME                                          READY   STATUS    RESTARTS   AGE
+tinyllama-1b-cpu-predictor-xxxxx-xxxxx        1/1     Running   0          3m
+----
+
+If the pod is stuck in `Init:0/1`, the ModelCar image is still downloading. Wait 3-5 minutes on first pull.
+
 == Verify the InferenceService
 
 Check that the InferenceService reports `READY = True`:
@@ -91,7 +132,16 @@ Check that the InferenceService reports `READY = True`:
 oc get inferenceservice -n {project_name}
 ----
 
+Expected output:
+
+----
+NAME               URL                                                   READY   AGE
+tinyllama-1b-cpu   https://tinyllama-1b-cpu-predictor-yourns.apps...     True    5m
+----
+
 The `URL` column shows the external endpoint. The `READY` column must show `True` before proceeding.
+
+If `READY` shows `False`, check the pod logs: `oc logs -l serving.kserve.io/inferenceservice=tinyllama-1b-cpu -n {project_name}`.
 
 == Test the Model Endpoint
 
@@ -132,6 +182,35 @@ curl -s ${VLLM_URL}/v1/chat/completions \
 ----
 
 Observe the response. The `usage` block shows token counts, and latency is a few seconds -- expected for CPU inference. You now have a working LLM endpoint on CPU, accessible via the standard OpenAI-compatible API.
+
+=== Verify: End-to-End Inference
+
+The response JSON should contain:
+
+* A `choices` array with a `message.content` field containing the answer
+* A `usage` block showing `prompt_tokens`, `completion_tokens`, and `total_tokens`
+* A `model` field showing `TinyLlama/TinyLlama-1.1B-Chat-v1.0`
+
+If you see a connection error, verify the route exists: `oc get route -n {project_name}`. If you see a 503, the model is still loading -- wait and retry.
+
+=== Troubleshooting
+
+[cols="1,2",options="header"]
+|===
+|Symptom |Resolution
+
+|Pod stuck in `Init:0/1` for more than 10 minutes
+|The ModelCar image pull may be slow or blocked. Check events: `oc describe pod -l serving.kserve.io/inferenceservice=tinyllama-1b-cpu -n {project_name}`
+
+|Pod in `CrashLoopBackOff`
+|vLLM could not load the model. Check logs: `oc logs -l serving.kserve.io/inferenceservice=tinyllama-1b-cpu`. Common cause: insufficient memory -- the pod needs at least 8Gi.
+
+|`curl` returns `Connection refused`
+|The route may not exist. Run `oc get route -n {project_name}` and verify `tinyllama-1b-cpu-predictor` is listed.
+
+|Response is very slow (30+ seconds)
+|First request after startup is always slower (cold KV cache). Subsequent requests should be 2-10 seconds.
+|===
 
 [.next-nav]
 xref:04-wire-rag-frontend.adoc[Next: Wire a RAG Frontend -->]

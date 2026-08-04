@@ -3,8 +3,26 @@
 
 _Estimated time: 10 minutes_
 
+In this module you will:
+
+* Understand why observability is critical for CPU-based AI serving
+* Read and interpret vLLM's Prometheus metrics
+* Measure actual resource consumption and compare it to your expectations
+
 You have a working CPU inference stack with RAG.
 In this module you will look under the hood -- checking metrics, resource usage, and understanding the tuning parameters that control performance.
+
+== Know: Why Observability Matters for CPU Inference
+
+GPU inference is expensive but predictable -- you know exactly how many GPUs you have and how fast they run. CPU inference has a different operational profile: the hardware is shared, performance depends on what else is running on the node, and resource contention is harder to detect.
+
+Without observability, you are guessing:
+
+* Is the model using the AMX instruction set, or falling back to slower AVX-512?
+* Is throughput dropping because of memory pressure, CPU throttling, or request queuing?
+* How many concurrent users can this pod actually serve before latency becomes unacceptable?
+
+Observability answers these questions with data. In a production environment, you would feed these metrics into a monitoring stack (Prometheus + Grafana) with alerts. In this lab, you will read them directly to understand what they tell you.
 
 == Check vLLM Metrics
 
@@ -35,6 +53,15 @@ Key metrics to understand:
 |How fast the model processes input tokens. Prompt processing is faster than generation.
 |===
 
+=== Verify: Metrics Are Accessible
+
+You should see a list of Prometheus metrics starting with `vllm:`. If the curl command returns an error or empty output, check that the vLLM pod is running and the route is correct.
+
+Key values to confirm:
+
+* `vllm:num_requests_running` should be `0` (no active requests)
+* `vllm:avg_generation_throughput_toks_per_s` should show a non-zero value if you have sent requests previously
+
 == Check Pod Resource Usage
 
 See how much CPU and memory the vLLM pod is actually consuming:
@@ -48,6 +75,16 @@ Key observations:
 
 * *CPU usage* -- during active inference, expect 4-10 cores utilized. At idle, much lower.
 * *Memory* -- the TinyLlama 1.1B model in BF16 uses approximately 2.2 GB for weights, plus additional memory for the KV cache. Total pod memory should be 3-5 GB under load.
+
+=== Verify: Resource Consumption
+
+The output should show CPU and memory usage for all pods in your project. For the vLLM pod:
+
+* *CPU at idle*: 0.1-0.5 cores -- the model is loaded but not processing requests
+* *CPU during inference*: 4-10 cores -- active generation uses the AMX/AVX-512 hardware paths
+* *Memory*: 3-5 Gi -- model weights (~2.2 GB) plus KV cache and runtime overhead
+
+If memory usage exceeds the pod's limit (12Gi), you may see OOMKilled restarts. If CPU usage never exceeds 1-2 cores during inference, the model may not be using hardware acceleration -- check the vLLM logs for AMX/AVX-512 detection.
 
 == Check vLLM Server Logs
 
@@ -64,6 +101,17 @@ Look for:
 * The dtype in use (bfloat16)
 * Confirmation that the model loaded successfully
 * The maximum context length (2048 tokens)
+
+=== Verify: Hardware Acceleration
+
+In the log output, look for these indicators:
+
+* `AVX512` or `AMX` detected -- the CPU supports hardware-accelerated inference
+* `dtype: bfloat16` -- the AMX hardware path is active
+* `max_model_len: 2048` -- your context window configuration is applied
+* `Model loaded` or similar -- the model is ready to serve requests
+
+If you see `AVX2` without `AVX512`, the CPU does not support the latest acceleration but inference will still work (slower).
 
 == Generate Load and Watch Metrics
 
@@ -91,6 +139,16 @@ After the requests complete, check the metrics again:
 VLLM_URL=$(oc get route tinyllama-1b-cpu-predictor -n $(oc project -q) -o jsonpath='https://{.spec.host}')
 curl -s ${VLLM_URL}/metrics | grep -E "throughput|requests_total|running"
 ----
+
+=== Exercise: Interpret Your Results
+
+After generating load, answer these questions:
+
+. What was the average tokens per second (`vllm:avg_generation_throughput_toks_per_s`)? Is it in the expected 10-30 tok/s range?
+. How much CPU did the vLLM pod use during active inference? Was it close to the limit (12 cores)?
+. How long did each request take (`time` output)? Is it acceptable for an interactive Q&A assistant?
+
+These numbers tell you whether this configuration is right for your use case. If throughput is too low or latency too high, you have two scaling options: add replicas (horizontal) or increase the per-pod CPU limit (vertical).
 
 == Understand the Tuning Tradeoffs
 
@@ -123,6 +181,25 @@ Be realistic about what CPU inference delivers:
 * *Latency* -- 2-10 seconds per response depending on output length. Acceptable for a Q&A assistant, not for real-time chat at scale.
 * *Concurrency* -- a single pod handles 1-2 concurrent requests well. Beyond that, queue times increase. Scale horizontally with replicas.
 * *Sweet spot* -- small models (under 3B), short outputs, low concurrency, cost-sensitive environments.
+
+=== Troubleshooting
+
+[cols="1,2",options="header"]
+|===
+|Symptom |Resolution
+
+|`curl /metrics` returns connection refused
+|The route may have been deleted or the pod restarted. Re-check with `oc get route -n {project_name}` and `oc get pods -n {project_name}`.
+
+|`oc adm top pods` returns "metrics not available"
+|The cluster metrics server may not be running. This is a cluster-level issue, not specific to your deployment.
+
+|Throughput is below 5 tok/s
+|Check if another workload is consuming CPU on the same node. Run `oc adm top nodes` to see node-level utilization.
+
+|Logs show no AMX/AVX-512 references
+|The node may have an older CPU without these extensions. Inference still works but will be slower. This does not affect the lab exercises.
+|===
 
 [.next-nav]
 xref:08-conclusion.adoc[Next: Conclusion -->]

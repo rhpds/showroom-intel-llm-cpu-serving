@@ -3,9 +3,23 @@
 
 _Estimated time: 15 minutes_
 
+In this module you will:
+
+* Understand why RAG systems need a document ingestion pipeline
+* Load and embed documents into the vector store
+* Verify that documents are chunked and searchable
+
 You have a model serving endpoint and a RAG workbench connected to it.
 But without documents, the model answers only from its training data.
 In this module you will load documents into AnythingLLM, understand how chunking and embedding work, and inspect the vector store.
+
+== Know: Why Your Assistant Needs Documents
+
+Right now, your HR assistant answers questions from its training data only. Ask it about your organization's parental leave policy and it will confidently generate a plausible-sounding answer -- that has nothing to do with your actual policy.
+
+This is the core problem RAG solves: the model does not need to _know_ your company's policies. It needs to _read_ the right documents at query time and ground its answers in that context.
+
+In this module you will load real documents into the vector store so the assistant can retrieve relevant passages before generating a response. The quality of your RAG system depends directly on this step -- the right documents with good chunking produce accurate answers; the wrong documents or poor chunking produce noise.
 
 == The RAG Ingestion Pipeline
 
@@ -26,6 +40,16 @@ Each step matters. Parse badly and you get garbled text. Chunk too large and ret
 LLMs have a finite context window (2048 tokens for your TinyLlama configuration). *Chunking* splits documents into passages small enough to fit, while keeping each self-contained. AnythingLLM uses ~512-token chunks by default -- a good balance of precision and context for policy documents.
 
 *Embedding* converts each chunk into a vector (list of numbers) capturing its meaning. Similar text produces similar vectors, enabling semantic search. AnythingLLM uses a built-in embedding model (`EMBEDDING_ENGINE: native`), independent of vLLM.
+
+=== Why 512 Tokens per Chunk?
+
+Chunk size is one of the most impactful decisions in a RAG pipeline:
+
+* *Too large* (2000+ tokens) -- the retriever returns passages with too much irrelevant content, diluting the useful information and consuming context window tokens
+* *Too small* (50-100 tokens) -- each chunk lacks enough context to be useful on its own, and the model gets fragmented information
+* *Just right* (256-512 tokens) -- each chunk is self-contained enough to be useful, small enough to be precise
+
+For policy documents like HR guides, 512 tokens typically captures one complete section or paragraph -- enough context for a grounded answer without wasting the model's limited context window.
 
 == Get the AnythingLLM API Key
 
@@ -99,6 +123,15 @@ curl -s ${ANYTHINGLLM_URL}/api/v1/workspace/hr-assistant \
 
 You should see the workspace with its document count and token statistics.
 
+=== Verify: Documents Are Embedded
+
+The response should show a workspace object with document count greater than zero. Look for:
+
+* `documents` array containing the loaded document metadata
+* `vectorCount` or similar field showing the number of embedded chunks
+
+If the document count is zero, the embedding step may have failed. Re-run the update-embeddings API call and check the AnythingLLM pod logs: `oc logs -l app=anythingllm -n {project_name}`.
+
 == Load Additional Documents
 
 Load more documents to build a richer knowledge base. You can also use the AnythingLLM browser UI to upload PDFs or text files directly.
@@ -124,6 +157,25 @@ When you loaded a document, AnythingLLM performed the full RAG ingestion pipelin
 . *Stored* the chunk text, vector, and metadata in LanceDB
 
 The quality of your RAG system depends directly on this pipeline. Good chunking with relevant documents produces accurate, grounded answers. Poor chunking or irrelevant documents produce noise.
+
+=== Troubleshooting
+
+[cols="1,2",options="header"]
+|===
+|Symptom |Resolution
+
+|`create-link` API returns 403
+|The API key is missing or incorrect. Regenerate it from the AnythingLLM settings page and update the `ANYTHINGLLM_API_KEY` environment variable.
+
+|Document shows in workspace but with zero embeddings
+|The embedding step (`update-embeddings`) was not run, or the document filename in the `adds` array does not match. List documents with the workspace API to find the correct filename.
+
+|Embedding is very slow
+|AnythingLLM's native embedding model runs on CPU. For large documents, this can take 1-2 minutes. This is expected behavior -- the embedding model is small and efficient, but not instant.
+
+|`update-embeddings` returns 404
+|The workspace name in the URL must match exactly. Check with `curl ${ANYTHINGLLM_URL}/api/v1/workspaces -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}"`.
+|===
 
 [.next-nav]
 xref:06-query-with-rag.adoc[Next: Query with RAG -->]

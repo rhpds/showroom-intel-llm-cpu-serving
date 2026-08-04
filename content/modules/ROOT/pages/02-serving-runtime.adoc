@@ -3,10 +3,30 @@
 
 _Estimated time: 15 minutes_
 
+In this module you will:
+
+* Understand why KServe separates runtime definitions from model deployments
+* Create a ServingRuntime that configures vLLM for CPU inference
+* Verify the runtime is registered and ready for use
+
 A KServe *ServingRuntime* defines *how* to run models -- the container image, startup flags, and resource constraints.
 It does not deploy a model. Think of it as a template: "when someone asks to serve a vLLM model, use this container with these arguments."
 
 In this module you will create the ServingRuntime from scratch and understand every field.
+
+== Why Separate the Runtime from the Model?
+
+In a traditional deployment, you bake everything together: the model server binary, its configuration, the model weights, and the resource limits all go into one Deployment YAML. That works for one model, but it does not scale.
+
+KServe introduces a separation of concerns. The *ServingRuntime* defines the _how_: which container image runs the inference server, what flags it starts with, and how much CPU and memory it needs. The *InferenceService* (Module 3) defines the _what_: which model to load and where to find its weights.
+
+This separation means you can:
+
+* Update the vLLM version across all models by editing one ServingRuntime
+* Deploy five different models without duplicating server configuration
+* Enforce resource policies (CPU limits, memory caps) in one place
+
+For the HR assistant you are building, this means the same `vllm-cpu` runtime could serve TinyLlama today and a larger model tomorrow -- without changing any deployment configuration.
 
 == Create the Project
 
@@ -127,21 +147,46 @@ spec:
 EOF
 ----
 
-== Verify the ServingRuntime
+=== Verify
 
-Confirm it was created:
+Confirm the ServingRuntime was created:
 
 [source,bash,role="execute",subs="attributes+"]
 ----
 oc get servingruntime -n {project_name}
 ----
 
-You should see `vllm-cpu` listed. Inspect the details:
+You should see output like:
+
+----
+NAME       DISABLED   MODELTYPE   CONTAINERS          AGE
+vllm-cpu              vLLM        kserve-container    10s
+----
+
+Inspect the details to confirm your flags are set correctly:
 
 [source,bash,role="execute",subs="attributes+"]
 ----
-oc describe servingruntime vllm-cpu -n {project_name}
+oc describe servingruntime vllm-cpu -n {project_name} | grep -A 5 "Args:"
 ----
+
+Expected output includes `--dtype=bfloat16`, `--enable-auto-tool-choice`, and `--max-model-len=2048`. If any flag is missing, delete the runtime (`oc delete servingruntime vllm-cpu`) and re-apply the YAML.
+
+=== Troubleshooting
+
+[cols="1,2",options="header"]
+|===
+|Symptom |Resolution
+
+|`oc new-project` returns "already exists"
+|The project was created in a previous attempt. Run `oc project {project_name}` to switch to it.
+
+|`oc get servingruntime` returns "No resources found"
+|The apply command may have failed silently. Re-run the `oc apply` command and check for YAML indentation errors.
+
+|ServingRuntime shows but InferenceService fails later
+|Check that `supportedModelFormats.name` is exactly `vLLM` (case-sensitive). The InferenceService matches on this string.
+|===
 
 == What This Does Not Do
 
