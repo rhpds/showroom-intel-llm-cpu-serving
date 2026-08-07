@@ -1,0 +1,17 @@
+
+Deploy a vLLM inference runtime on Intel Xeon CPUs, serve a small language model (Granite 2B), and wire an AnythingLLM chatbot frontend -- all on CPU-only infrastructure. Powered by Intel.
+
+== What Gets Deployed
+
+* *vLLM on CPU* -- Inference runtime serving Granite 2B on Intel Xeon processors, no GPU required
+* *AnythingLLM Chatbot* -- Pre-wired chat frontend connected to the local vLLM endpoint
+* *LiteLLM Virtual Key* -- Scoped API key for MAAS model access (7-day TTL)
+* *Showroom Lab Guide* -- Step-by-step instructions with embedded terminal and OpenShift Console
+
+== Hardware
+
+All inference runs on Intel Xeon CPUs. No GPU or accelerator hardware is required. Powered by Intel.
+
+== Duration
+
+Estimated completion time: 60 minutes.
