@@ -115,22 +115,16 @@ You are ready. Start with the fundamentals.
 [.next-nav]
 xref:01-cpu-inference-fundamentals.adoc[Next: CPU Inference Fundamentals -->]
 
-== Intel Hardware
+== Powered by Intel
 
-This lab runs on **Intel Xeon** processors via the Red Hat Demo Platform.
+AI inference in this lab runs on **Intel** hardware via the Red Hat Demo Platform.
 
 [cols="1,2",options="header"]
 |===
-|Component |Intel Hardware
+|Component |Details
 
-|**LLM Inference (vLLM)**
-|TinyLlama 1.1B on Intel Xeon CPU with AMX bf16 acceleration
-
-|**RAG Workbench**
-|AnythingLLM with native embeddings on Intel Xeon
-
-|**Infrastructure**
-|Red Hat OpenShift on Intel Xeon worker nodes
+|**LLM Inference**
+|{maas_model} on Intel via Model-as-a-Service
 |===
 
 TIP: This lab is part of the Red Hat + Intel AI Inference Partnership.
