@@ -19,10 +19,10 @@ When you ask a question through AnythingLLM with documents loaded, five things h
          |
 [4] Retrieved chunks are injected into the prompt as context
          |
-[5] vLLM generates an answer grounded in the retrieved context
+[5] MaaS generates an answer grounded in the retrieved context
 ----
 
-The model does not search the vector store itself. AnythingLLM handles retrieval, builds the augmented prompt, and sends it to vLLM. The model just sees a system prompt, context documents, and a user question.
+The model does not search the vector store itself. AnythingLLM handles retrieval, builds the augmented prompt, and sends it to the MaaS endpoint. The model just sees a system prompt, context documents, and a user question.
 
 == Ask a Domain-Specific Question -- With RAG
 
@@ -36,9 +36,8 @@ Observe the response. If the FMLA document was loaded correctly in Module 5, the
 
 You can also query via the API:
 
-[source,bash,role="execute"]
+[source,bash,role="execute",subs="attributes+"]
 ----
-ANYTHINGLLM_URL=$(oc get route anythingllm -n $(oc project -q) -o jsonpath='https://{.spec.host}')
 curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/workspace/hr-assistant/chat \
   -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" \
   -H "Content-Type: application/json" \
@@ -47,27 +46,27 @@ curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/workspace/hr-assistant/chat \
 
 == Ask the Same Question -- Without RAG
 
-Now ask the same question directly to the vLLM endpoint, bypassing AnythingLLM and the document store entirely:
+Now ask the same question directly to the MaaS endpoint, bypassing AnythingLLM and the document store entirely:
 
 [source,bash,role="execute"]
 ----
-VLLM_URL=$(oc get route tinyllama-1b-cpu-predictor -n $(oc project -q) -o jsonpath='https://{.spec.host}')
-curl -s ${VLLM_URL}/v1/chat/completions \
+curl -s "${MAAS_ENDPOINT}/v1/chat/completions" \
+  -H "Authorization: Bearer ${MAAS_API_KEY}" \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    "messages": [
-      {"role": "user", "content": "What are the eligibility requirements for FMLA leave?"}
+  -d "{
+    \"model\": \"${MAAS_MODEL}\",
+    \"messages\": [
+      {\"role\": \"user\", \"content\": \"What are the eligibility requirements for FMLA leave?\"}
     ],
-    "max_tokens": 256
-  }' | python3 -m json.tool
+    \"max_tokens\": 256
+  }" | python3 -c "import sys,json; print(json.load(sys.stdin)['choices'][0]['message']['content'])"
 ----
 
 == Compare the Results
 
 [cols="1,1",options="header"]
 |===
-|With RAG (AnythingLLM) |Without RAG (Direct vLLM)
+|With RAG (AnythingLLM) |Without RAG (Direct MaaS)
 
 |References specific FMLA requirements from the loaded document
 |Gives a generic answer from training data
@@ -82,19 +81,22 @@ curl -s ${VLLM_URL}/v1/chat/completions \
 |Quality depends only on model training
 |===
 
-The key insight: *RAG does not make the model smarter. It gives the model better information.* A 1.1B model with the right documents retrieved can outperform a much larger model answering from memory alone.
+The key insight: *RAG does not make the model smarter. It gives the model better information.* A CPU-optimized model with the right documents retrieved can outperform a much larger model answering from memory alone.
 
 == Try More Questions
 
-Ask these in the AnythingLLM workspace, then repeat them directly against vLLM to see the difference: "How much overtime pay is required by federal law?", "What notice must an employer provide for FMLA leave?", and "Can an employer deny FMLA leave?"
+Ask these in the AnythingLLM workspace, then repeat them directly against the MaaS endpoint to see the difference:
+
+* "How much overtime pay is required by federal law?"
+* "What notice must an employer provide for FMLA leave?"
+* "Can an employer deny FMLA leave?"
 
 == Use Query Mode to See Retrieved Chunks
 
 AnythingLLM supports a *query* mode that shows you exactly which chunks were retrieved:
 
-[source,bash,role="execute"]
+[source,bash,role="execute",subs="attributes+"]
 ----
-ANYTHINGLLM_URL=$(oc get route anythingllm -n $(oc project -q) -o jsonpath='https://{.spec.host}')
 curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/workspace/hr-assistant/chat \
   -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" \
   -H "Content-Type: application/json" \
@@ -111,16 +113,14 @@ Try asking a question about a topic *not* covered by your loaded documents:
 What is the company policy on remote work?
 ----
 
-Since you did not load a remote work policy, the model either says it does not know (good -- the system is honest) or generates a generic answer (less good -- the system is guessing). This is expected behavior and highlights an important principle: *RAG is only as good as the documents in the vector store.*
+Since you did not load a remote work policy, the model either says it does not know (good) or generates a generic answer (less good). This highlights an important principle: *RAG is only as good as the documents in the vector store.*
 
 == What You Proved
 
-In this module you demonstrated the core value of RAG:
-
 * The *same model* gives different quality answers depending on whether it has retrieved context
 * Retrieved context produces answers grounded in verifiable source material
-* The RAG pipeline is transparent -- you can inspect which chunks were retrieved and why
+* The RAG pipeline is transparent -- you can inspect which chunks were retrieved
 * Missing documents lead to missing answers, which is preferable to hallucinated answers
 
 [.next-nav]
-xref:07-observe-cpu-inference.adoc[Next: Observe CPU Inference -->]
+xref:07-understand-cpu-performance.adoc[Next: Understand CPU Inference Performance -->]

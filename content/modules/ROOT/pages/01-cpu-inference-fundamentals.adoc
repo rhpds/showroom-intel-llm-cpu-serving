@@ -3,7 +3,7 @@
 
 _Estimated time: 15 minutes_
 
-Before you build anything, you need to understand *why* running LLMs on CPU works and when it is the right choice.
+Before you connect to anything, you need to understand *why* running LLMs on CPU works and when it is the right choice.
 This module is conceptual -- no deployment, no YAML. Just the foundation you need for the rest of the lab.
 
 == Why CPU Inference?
@@ -25,7 +25,7 @@ Modern {intel_platform} processors include instruction set extensions that accel
 
 Available on 4th Gen {intel_platform} Scalable (Sapphire Rapids) and later. AMX provides dedicated hardware for BF16 and INT8 matrix multiplication -- the core operation in transformer inference. Think of it as a small matrix engine built into the CPU.
 
-When vLLM starts with `--dtype bfloat16`, it targets the AMX code path. This is why that flag matters -- it is not just a precision choice, it selects the fastest hardware path available.
+When vLLM (the inference engine behind MaaS) runs with `--dtype bfloat16`, it targets the AMX code path. This is not just a precision choice -- it selects the fastest hardware path available.
 
 === AVX-512 VNNI
 
@@ -37,7 +37,7 @@ Available on 3rd Gen {intel_platform} Scalable (Ice Lake) and later. AVX-512 pro
 |===
 |Workload |Why CPU Works
 
-|*Small models (under 3B parameters)*
+|*Small models (under 8B parameters)*
 |Model weights fit in system memory. Inference latency is acceptable for interactive use.
 
 |*Classification and entity extraction*
@@ -72,37 +72,41 @@ Available on 3rd Gen {intel_platform} Scalable (Ice Lake) and later. AVX-512 pro
 |Sub-100ms latency requirements at high concurrency.
 |===
 
-== The TinyLlama 1.1B Model
+== The {maas_model} Model
 
-In this lab you will serve *TinyLlama 1.1B Chat v1.0* -- a 1.1 billion parameter model trained on 3 trillion tokens.
+In this lab you will use *{maas_model}* -- a model optimized for CPU inference on {intel_platform} processors. It is served via Red Hat's Model-as-a-Service (MaaS) platform.
 
-Why this model for CPU inference:
+Key characteristics:
 
-* *Size* -- at 1.1B parameters in BF16, the model weights are approximately 2.2 GB. This fits comfortably in L3 cache on modern {intel_platform} processors.
-* *Architecture* -- standard Llama architecture, so vLLM's optimized CPU kernels apply directly.
-* *Quality* -- sufficient for document Q&A, summarization, and classification tasks. Not suitable for complex reasoning or creative writing.
-* *Speed* -- at this size, CPU inference delivers usable latency (seconds, not minutes) for interactive use.
+* *Optimized for CPU* -- specifically tuned for {intel_platform} hardware with AMX/AVX-512 acceleration
+* *Architecture* -- standard transformer architecture, so vLLM's optimized CPU kernels apply directly
+* *Quality* -- sufficient for document Q&A, summarization, and classification tasks
+* *Cost* -- $0/token via MaaS. No GPU procurement, no infrastructure management
 
-== Check Your Cluster's CPU Capabilities
+== What Is Model-as-a-Service (MaaS)?
 
-Let's verify what hardware acceleration is available on your cluster nodes. This will tell you which code path vLLM will use.
+MaaS is a managed inference platform. Instead of deploying model infrastructure in every cluster, the platform team runs optimized inference servers centrally and exposes them via an OpenAI-compatible API.
 
-[source,bash,role="execute"]
 ----
-NODE=$(oc get nodes -o jsonpath='{.items[0].metadata.name}')
-oc debug node/${NODE} -- chroot /host lscpu | grep -i -E "amx|avx512|vnni|model name" 2>/dev/null | head -10
+Your Application
+      |
+      v
+MaaS / LiteLLM (OpenAI-compatible API)
+      |
+      v
+vLLM on Intel Xeon (managed fleet)
+      |
+      v
+Intel Xeon 6 (AMX acceleration)
 ----
 
-Look for:
+Benefits:
 
-* `amx_bf16` or `amx_int8` -- your cluster has AMX acceleration (best performance)
-* `avx512_vnni` -- your cluster has VNNI acceleration (good performance)
-* `avx512f` -- your cluster has baseline AVX-512 (adequate performance)
-
-[NOTE]
-====
-You do not need AMX for this lab to work. vLLM will use the best available instruction set automatically. AMX makes it faster, but AVX-512 is sufficient for a 1.1B model.
-====
+* *No CRDs or operators required* -- your cluster does not need KServe, ServingRuntime, or any AI-specific operators
+* *No model weight downloads* -- the model is already loaded and warm
+* *Instant availability* -- no 5-minute cold start waiting for model weights to load
+* *Centralized scaling* -- the MaaS fleet scales independently of your application cluster
+* *Standard API* -- same OpenAI-compatible API that works with any LLM client library
 
 == Key Concepts for This Lab
 
@@ -110,20 +114,20 @@ You do not need AMX for this lab to work. vLLM will use the best available instr
 |===
 |Concept |What It Means in This Lab
 
-|*ServingRuntime*
-|A KServe resource that defines *how* to run models -- the container image, startup flags, resource limits. You will create this in Module 2.
+|*MaaS Endpoint*
+|The URL of the managed inference service. You will connect to this in Module 2.
 
-|*InferenceService*
-|A KServe resource that deploys *which* model to serve using a given runtime. You will create this in Module 3.
+|*LiteLLM Virtual Key*
+|An API key scoped to your lab session. It gives you access to specific models with usage tracking.
 
-|*ModelCar*
-|An OCI container image that packages model weights. Instead of downloading from HuggingFace at startup, the weights are baked into a container image and pulled from a registry.
+|*OpenAI-compatible API*
+|The standard `/v1/chat/completions` and `/v1/models` endpoints. Any tool that speaks this protocol works with MaaS.
 
 |*RAG*
 |Retrieval-Augmented Generation -- searching documents first, then generating answers grounded in the retrieved content. You will build this in Modules 4-6.
 |===
 
-You now have the conceptual foundation. Time to build.
+You now have the conceptual foundation. Time to connect.
 
 [.next-nav]
-xref:02-serving-runtime.adoc[Next: Build a vLLM Serving Runtime -->]
+xref:02-explore-maas.adoc[Next: Explore Model-as-a-Service -->]

@@ -6,37 +6,37 @@ _Estimated time: 15 minutes_
 In this module you will:
 
 * Understand why a RAG workbench is separate from the model server
-* Deploy AnythingLLM and connect it to the vLLM endpoint
+* Deploy AnythingLLM and connect it to the MaaS endpoint
 * Verify end-to-end connectivity from the chat UI to CPU inference
 
-You have a model endpoint. Now you need a frontend that connects to it, adds document retrieval, and gives users a chat interface.
-In this module you will deploy AnythingLLM and wire it to the vLLM endpoint you created in Module 3.
+You have tested the MaaS endpoint directly with curl.
+Now you will deploy a RAG workbench that connects to that same endpoint, adds document retrieval, and gives users a chat interface.
 
 == Know: Why Separate the Chat Layer from the Model?
 
-Your vLLM endpoint from Module 3 is a raw API: send JSON, get JSON back. No chat history, no document retrieval, no user interface. That is by design — the model server should do one thing well.
+The MaaS endpoint is a raw API: send JSON, get JSON back. No chat history, no document retrieval, no user interface. That is by design -- the model server should do one thing well.
 
 A *RAG workbench* adds the layers that make the model useful to end users:
 
-* *Chat interface* — a browser-based UI for conversational interaction
-* *Document management* — upload, chunk, and embed documents
-* *Vector storage* — store and search document embeddings
-* *Retrieval pipeline* — find relevant documents before generating a response
-* *Conversation memory* — maintain context across multiple messages
+* *Chat interface* -- a browser-based UI for conversational interaction
+* *Document management* -- upload, chunk, and embed documents
+* *Vector storage* -- store and search document embeddings
+* *Retrieval pipeline* -- find relevant documents before generating a response
+* *Conversation memory* -- maintain context across multiple messages
 
-Separating these concerns means you can swap the model without touching the frontend, or replace the vector store without redeploying the model. For the HR assistant, this means you could upgrade from TinyLlama to a larger model later — AnythingLLM would not need to change.
+Separating these concerns means you can swap the model without touching the frontend, or replace the vector store without changing the model endpoint. For the HR assistant, this means you could switch from {maas_model} to a larger model later -- AnythingLLM would not need to change.
 
 == What Is AnythingLLM?
 
-AnythingLLM is an open-source RAG workbench. It does not run the model — it connects to any OpenAI-compatible endpoint and adds document chunking, embedding, vector storage (LanceDB), RAG retrieval, and a chat UI.
+AnythingLLM is an open-source RAG workbench. It does not run the model -- it connects to any OpenAI-compatible endpoint and adds document chunking, embedding, vector storage (LanceDB), RAG retrieval, and a chat UI.
 
 In this lab, it serves three roles:
 
-. *LLM Client* — sends chat completion requests to vLLM over the OpenAI API
-. *Embedding Engine* — runs its own lightweight embedding model to vectorize documents (independent of vLLM)
-. *Vector Store* — stores document embeddings in LanceDB, an embedded vector database that requires no external infrastructure
+. *LLM Client* -- sends chat completion requests to MaaS over the OpenAI API
+. *Embedding Engine* -- runs its own lightweight embedding model to vectorize documents (independent of the LLM)
+. *Vector Store* -- stores document embeddings in LanceDB, an embedded vector database that requires no external infrastructure
 
-The key point: AnythingLLM is a *client* of the vLLM endpoint, not a model server. All inference happens on the {intel_platform} CPU via vLLM.
+The key point: AnythingLLM is a *client* of the MaaS endpoint. All LLM inference happens on {intel_platform} CPUs via the managed service.
 
 == Create the Configuration Secret
 
@@ -46,36 +46,39 @@ Examine each field:
 
 [source,yaml]
 ----
-LLM_PROVIDER: localai                              # <1>
-LOCAL_AI_BASE_PATH: http://tinyllama-1b-cpu-predictor:8080/v1  # <2>
-LOCAL_AI_MODEL_PREF: TinyLlama/TinyLlama-1.1B-Chat-v1.0      # <3>
-LOCAL_AI_MODEL_TOKEN_LIMIT: "512"                  # <4>
-EMBEDDING_ENGINE: native                           # <5>
-VECTOR_DB: lancedb                                 # <6>
+LLM_PROVIDER: genericOpenAi                            # <1>
+GENERIC_OPEN_AI_BASE_PATH: {maas_endpoint}/v1           # <2>
+GENERIC_OPEN_AI_MODEL_PREF: {maas_model}                # <3>
+GENERIC_OPEN_AI_API_KEY: <your-litellm-virtual-key>     # <4>
+GENERIC_OPEN_AI_MAX_TOKENS: "512"                       # <5>
+EMBEDDING_ENGINE: native                                # <6>
+VECTOR_DB: lancedb                                      # <7>
 ----
 
-<1> *LLM_PROVIDER* -- tells AnythingLLM to use the "LocalAI" provider, which speaks the OpenAI-compatible protocol.
-<2> *LOCAL_AI_BASE_PATH* -- the internal KServe service URL. This is the Kubernetes service created by the InferenceService, reachable inside the cluster without a Route.
-<3> *LOCAL_AI_MODEL_PREF* -- the model name as reported by `/v1/models`.
-<4> *LOCAL_AI_MODEL_TOKEN_LIMIT* -- maximum tokens per response. Kept low because TinyLlama 1.1B has a 2048 token context and you need room for RAG context.
-<5> *EMBEDDING_ENGINE: native* -- AnythingLLM runs its own embedding model for document vectorization, independent of vLLM.
-<6> *VECTOR_DB: lancedb* -- uses the built-in LanceDB vector store. No external database needed.
+<1> *LLM_PROVIDER* -- tells AnythingLLM to use the generic OpenAI-compatible provider.
+<2> *BASE_PATH* -- the MaaS endpoint URL. This is the external endpoint, not a cluster-internal service.
+<3> *MODEL_PREF* -- the model name as reported by `/v1/models`.
+<4> *API_KEY* -- your LiteLLM virtual key for authentication.
+<5> *MAX_TOKENS* -- maximum tokens per response.
+<6> *EMBEDDING_ENGINE: native* -- AnythingLLM runs its own embedding model for document vectorization, independent of the LLM.
+<7> *VECTOR_DB: lancedb* -- uses the built-in LanceDB vector store. No external database needed.
 
 Create the Secret:
 
 [source,bash,role="execute",subs="attributes+"]
 ----
-cat <<'EOF' | oc apply -n {project_name} -f -
+cat <<EOF | oc apply -n {project_name} -f -
 apiVersion: v1
 kind: Secret
 metadata:
   name: anythingllm-config
 type: Opaque
 stringData:
-  LLM_PROVIDER: localai
-  LOCAL_AI_BASE_PATH: "http://tinyllama-1b-cpu-predictor:8080/v1"
-  LOCAL_AI_MODEL_PREF: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-  LOCAL_AI_MODEL_TOKEN_LIMIT: "512"
+  LLM_PROVIDER: genericOpenAi
+  GENERIC_OPEN_AI_BASE_PATH: "{maas_endpoint}/v1"
+  GENERIC_OPEN_AI_MODEL_PREF: "{maas_model}"
+  GENERIC_OPEN_AI_API_KEY: "{maas_api_key}"
+  GENERIC_OPEN_AI_MAX_TOKENS: "512"
   EMBEDDING_ENGINE: native
   VECTOR_DB: lancedb
 EOF
@@ -151,8 +154,6 @@ NAME                           READY   STATUS    RESTARTS   AGE
 anythingllm-xxxxx-xxxxx        1/1     Running   0          30s
 ----
 
-If the pod is not running, check events: `oc describe deployment anythingllm -n {project_name}`.
-
 == Verify the Connection
 
 Get the AnythingLLM URL:
@@ -160,7 +161,7 @@ Get the AnythingLLM URL:
 [source,bash,role="execute",subs="attributes+"]
 ----
 export ANYTHINGLLM_URL=$(oc get route anythingllm -n {project_name} -o jsonpath='https://\{.spec.host\}')
-echo "AnythingLLM URL: $\{ANYTHINGLLM_URL\}"
+echo "AnythingLLM URL: ${ANYTHINGLLM_URL}"
 ----
 
 Open that URL in your browser. Complete the initial setup wizard -- select the existing LLM configuration (it will auto-detect the settings from the Secret).
@@ -176,23 +177,20 @@ What is the role of an HR representative?
 The response flows through this path:
 
 . You type a question in AnythingLLM
-. AnythingLLM sends it as a chat completion to `http://tinyllama-1b-cpu-predictor:8080/v1`
-. vLLM runs inference on {intel_platform} CPU
+. AnythingLLM sends it as a chat completion to the MaaS endpoint
+. vLLM runs inference on {intel_platform} CPUs (managed by the platform)
 . The response returns to AnythingLLM and displays in the chat
 
 This confirms end-to-end wiring. The model is answering from its training data only -- no documents are loaded yet. That comes in Module 5.
 
 === Verify: End-to-End Wiring
 
-You should see a response from the model in the AnythingLLM chat interface. The response will be a general answer based on the model's training data — it will not reference any specific HR documents yet.
+You should see a response from the model in the AnythingLLM chat interface. The response will be a general answer based on the model's training data -- it will not reference any specific HR documents yet.
 
 If you see an error like "Could not connect to LLM provider":
 
-. Check that the vLLM pod is still running: `oc get pods -n {project_name}`
-. Verify the service name: `oc get svc -n {project_name} | grep tinyllama`
+. Check that the MaaS endpoint is reachable: `curl -s ${MAAS_ENDPOINT}/v1/models -H "Authorization: Bearer ${MAAS_API_KEY}"`
 . Check the secret values: `oc get secret anythingllm-config -n {project_name} -o yaml`
-
-The internal URL `http://tinyllama-1b-cpu-predictor:8080/v1` must match the service name created by KServe in Module 3.
 
 === Troubleshooting
 
@@ -201,13 +199,13 @@ The internal URL `http://tinyllama-1b-cpu-predictor:8080/v1` must match the serv
 |Symptom |Resolution
 
 |AnythingLLM UI shows "Could not connect to LLM provider"
-|The vLLM service name in the secret may be wrong. Verify with `oc get svc -n {project_name}` and check that `LOCAL_AI_BASE_PATH` matches.
+|The MaaS endpoint URL or API key in the secret may be wrong. Verify connectivity with curl first, then check the secret.
 
 |AnythingLLM pod in `CrashLoopBackOff`
 |Check logs: `oc logs -l app=anythingllm -n {project_name}`. Common cause: the secret is missing or malformed.
 
 |Chat returns empty responses
-|The model may still be loading. Check vLLM pod status: `oc get pods -n {project_name}`. Also verify `LOCAL_AI_MODEL_PREF` matches the exact model name from `/v1/models`.
+|The model may be temporarily unavailable. Check MaaS connectivity with curl from Module 2.
 
 |Route returns 503
 |The AnythingLLM pod may not be ready. Wait for the rollout to complete and retry.
