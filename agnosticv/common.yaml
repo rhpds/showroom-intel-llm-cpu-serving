@@ -131,7 +131,7 @@ ai_model_requirements:
 # Clones the app repo and runs `make deploy` to install the Helm chart
 # into the tenant namespace.
 # -------------------------------------------------------------------
-quickstart_deploy_via_make_repo_url: https://github.com/rh-ai-quickstart/llm-cpu-serving
+quickstart_deploy_via_make_repo_url: https://github.com/rhpds/llm-cpu-serving
 quickstart_deploy_via_make_scm_ref: main
 quickstart_deploy_via_make_directory: helm
 quickstart_deploy_via_make_params:
@@ -148,7 +148,7 @@ quickstart_deploy_via_make_uninstall_params:
 # cluster-specific hostnames.
 # -------------------------------------------------------------------
 ocp4_workload_showroom_namespace: "{{ ocp4_workload_tenant_keycloak_username }}-showroom"
-ocp4_workload_showroom_content_git_repo: https://github.com/rh-ai-quickstart/showroom-intel-llm-cpu-serving
+ocp4_workload_showroom_content_git_repo: https://github.com/rhpds/showroom-intel-llm-cpu-serving
 ocp4_workload_showroom_content_git_repo_ref: main
 ocp4_workload_showroom_terminal_type: showroom
 ocp4_workload_showroom_terminal_image: quay.io/rhpds/openshift-showroom-terminal-ocp:2026-03-11

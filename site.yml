@@ -1,7 +1,7 @@
 ---
 site:
   title: "Serve LLMs on Intel Xeon CPUs"
-  url: https://github.com/rh-ai-quickstart/showroom-llm-cpu-serving
+  url: https://github.com/rhpds/showroom-intel-llm-cpu-serving
   start_page: modules::index.adoc
 
 content:

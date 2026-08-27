@@ -1,6 +1,6 @@
 = Serve LLMs on Intel Xeon CPUs -- Lab
 
-This repository contains a guided, hands-on lab for the https://github.com/rh-ai-quickstart/llm-cpu-serving[llm-cpu-serving] quickstart.
+This repository contains a guided, hands-on lab for the https://github.com/rhpds/llm-cpu-serving[llm-cpu-serving] quickstart.
 
 == Running locally
 
@@ -17,5 +17,5 @@ open www/index.html
 
 == Related
 
-* https://github.com/rh-ai-quickstart/llm-cpu-serving[Quickstart Repository]
+* https://github.com/rhpds/llm-cpu-serving[Quickstart Repository]
 * https://docs.redhat.com/en/learn/ai-quickstarts[AI Quickstart Catalog]
