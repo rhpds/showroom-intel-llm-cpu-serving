@@ -86,17 +86,30 @@ EOF
 
 == Deploy AnythingLLM
 
-Create the Deployment that runs the AnythingLLM workbench:
+Create a persistent volume for AnythingLLM's application data and the Deployment that runs the workbench. The ephemeral-storage request also lets the OpenShift scheduler account for the container's writable storage before placing it on a node:
 
 [source,bash,role="execute",subs="attributes+"]
 ----
 cat <<'EOF' | oc apply -n {project_name} -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: anythingllm-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: anythingllm
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: anythingllm
@@ -113,13 +126,22 @@ spec:
           envFrom:
             - secretRef:
                 name: anythingllm-config
+          volumeMounts:
+            - name: anythingllm-storage
+              mountPath: /app/server/storage
           resources:
             requests:
               cpu: "1"
               memory: 1Gi
+              ephemeral-storage: 1Gi
             limits:
               cpu: "2"
               memory: 2Gi
+              ephemeral-storage: 3Gi
+      volumes:
+        - name: anythingllm-storage
+          persistentVolumeClaim:
+            claimName: anythingllm-storage
 EOF
 ----
 
@@ -161,7 +183,7 @@ Get the AnythingLLM URL:
 [source,bash,role="execute",subs="attributes+"]
 ----
 export ANYTHINGLLM_URL=$(oc get route anythingllm -n {project_name} -o jsonpath='https://\{.spec.host\}')
-echo "AnythingLLM URL: ${ANYTHINGLLM_URL}"
+echo "AnythingLLM URL: $\{ANYTHINGLLM_URL\}"
 ----
 
 Open that URL in your browser. Complete the initial setup wizard -- select the existing LLM configuration (it will auto-detect the settings from the Secret).
@@ -203,6 +225,9 @@ If you see an error like "Could not connect to LLM provider":
 
 |AnythingLLM pod in `CrashLoopBackOff`
 |Check logs: `oc logs -l app=anythingllm -n {project_name}`. Common cause: the secret is missing or malformed.
+
+|AnythingLLM pod is `Evicted`
+|Run `oc describe pod -l app=anythingllm -n {project_name}` and inspect the eviction message. A message stating that the node was low on ephemeral storage is a shared-cluster capacity condition, not an application error. Report it to the lab administrator; recreating the pod is only a temporary workaround.
 
 |Chat returns empty responses
 |The model may be temporarily unavailable. Check MaaS connectivity with curl from Module 2.

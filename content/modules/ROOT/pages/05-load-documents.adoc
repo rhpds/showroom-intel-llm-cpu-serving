@@ -52,7 +52,7 @@ The AnythingLLM API requires an API key. Retrieve it from the running instance:
 [source,bash,role="execute",subs="attributes+"]
 ----
 export ANYTHINGLLM_URL=$(oc get route anythingllm -n {project_name} -o jsonpath='https://\{.spec.host\}')
-echo "Get your API key from: ${ANYTHINGLLM_URL}/settings/api-keys"
+echo "Get your API key from: $\{ANYTHINGLLM_URL\}/settings/api-keys"
 ----
 
 Open the settings page in your browser and generate an API key. Set it in your terminal:
@@ -68,8 +68,8 @@ Create an HR Assistant workspace via the API:
 
 [source,bash,role="execute",subs="attributes+"]
 ----
-curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/workspace/new \
-  -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" \
+curl -s -X POST $\{ANYTHINGLLM_URL\}/api/v1/workspace/new \
+  -H "Authorization: Bearer $\{ANYTHINGLLM_API_KEY\}" \
   -H "Content-Type: application/json" \
   -d '{"name": "hr-assistant"}' | python3 -m json.tool
 ----
@@ -80,8 +80,8 @@ Load an HR compliance document from the web into the workspace:
 
 [source,bash,role="execute",subs="attributes+"]
 ----
-curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/document/create-link \
-  -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" \
+curl -s -X POST $\{ANYTHINGLLM_URL\}/api/v1/document/create-link \
+  -H "Authorization: Bearer $\{ANYTHINGLLM_API_KEY\}" \
   -H "Content-Type: application/json" \
   -d '{"link": "https://www.dol.gov/agencies/whd/fmla"}' | python3 -m json.tool
 ----
@@ -94,8 +94,8 @@ After uploading, embed the document so it is searchable:
 
 [source,bash,role="execute",subs="attributes+"]
 ----
-curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/workspace/hr-assistant/update-embeddings \
-  -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" \
+curl -s -X POST $\{ANYTHINGLLM_URL\}/api/v1/workspace/hr-assistant/update-embeddings \
+  -H "Authorization: Bearer $\{ANYTHINGLLM_API_KEY\}" \
   -H "Content-Type: application/json" \
   -d '{"adds": ["custom-documents/url-www.dol.gov-agencies-whd-fmla.json"]}' | python3 -m json.tool
 ----
@@ -106,8 +106,8 @@ Check the workspace document list:
 
 [source,bash,role="execute",subs="attributes+"]
 ----
-curl -s ${ANYTHINGLLM_URL}/api/v1/workspace/hr-assistant \
-  -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" | python3 -m json.tool
+curl -s $\{ANYTHINGLLM_URL\}/api/v1/workspace/hr-assistant \
+  -H "Authorization: Bearer $\{ANYTHINGLLM_API_KEY\}" | python3 -m json.tool
 ----
 
 === Verify: Documents Are Embedded
@@ -120,8 +120,8 @@ Load more documents to build a richer knowledge base:
 
 [source,bash,role="execute",subs="attributes+"]
 ----
-curl -s -X POST ${ANYTHINGLLM_URL}/api/v1/document/create-link \
-  -H "Authorization: Bearer ${ANYTHINGLLM_API_KEY}" \
+curl -s -X POST $\{ANYTHINGLLM_URL\}/api/v1/document/create-link \
+  -H "Authorization: Bearer $\{ANYTHINGLLM_API_KEY\}" \
   -H "Content-Type: application/json" \
   -d '{"link": "https://www.dol.gov/agencies/whd/overtime"}' | python3 -m json.tool
 ----

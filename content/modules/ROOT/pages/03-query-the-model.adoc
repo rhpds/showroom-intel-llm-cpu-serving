@@ -104,39 +104,48 @@ Notice the difference: the system prompt shapes the tone, detail level, and doma
 
 == Exercise: Temperature and Determinism
 
-Temperature controls how "creative" the model is. Try the same prompt at different temperatures:
+Temperature changes the model's token-sampling distribution. It influences variation, but it does not guarantee that two responses will differ. Small models can still select the same high-probability answer, especially for tightly constrained factual prompts.
+
+Try a more open-ended prompt three times at each temperature:
 
 *Temperature 0.0 (deterministic):*
 
 [source,bash,role="execute"]
 ----
-curl -s "${MAAS_ENDPOINT}/v1/chat/completions" \
-  -H "Authorization: Bearer ${MAAS_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"${MAAS_MODEL}\",
-    \"messages\": [{\"role\": \"user\", \"content\": \"List 3 benefits of remote work.\"}],
-    \"max_tokens\": 150,
-    \"temperature\": 0.0
-  }" | python3 -c "import sys,json; r=json.load(sys.stdin); print(r['choices'][0]['message']['content'])"
+for run in 1 2 3; do
+  echo "--- deterministic run ${run} ---"
+  curl -s "${MAAS_ENDPOINT}/v1/chat/completions" \
+    -H "Authorization: Bearer ${MAAS_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"model\": \"${MAAS_MODEL}\",
+      \"messages\": [{\"role\": \"user\", \"content\": \"Invent a fictional employee-wellness activity for a remote team. Describe it in a short paragraph.\"}],
+      \"max_tokens\": 150,
+      \"temperature\": 0.0
+    }" | python3 -c "import sys,json; r=json.load(sys.stdin); print(r['choices'][0]['message']['content'])"
+done
 ----
 
 *Temperature 1.0 (creative):*
 
 [source,bash,role="execute"]
 ----
-curl -s "${MAAS_ENDPOINT}/v1/chat/completions" \
-  -H "Authorization: Bearer ${MAAS_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"${MAAS_MODEL}\",
-    \"messages\": [{\"role\": \"user\", \"content\": \"List 3 benefits of remote work.\"}],
-    \"max_tokens\": 150,
-    \"temperature\": 1.0
-  }" | python3 -c "import sys,json; r=json.load(sys.stdin); print(r['choices'][0]['message']['content'])"
+for run in 1 2 3; do
+  echo "--- creative run ${run} ---"
+  curl -s "${MAAS_ENDPOINT}/v1/chat/completions" \
+    -H "Authorization: Bearer ${MAAS_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"model\": \"${MAAS_MODEL}\",
+      \"messages\": [{\"role\": \"user\", \"content\": \"Invent a fictional employee-wellness activity for a remote team. Describe it in a short paragraph.\"}],
+      \"max_tokens\": 150,
+      \"temperature\": 1.0,
+      \"top_p\": 1.0
+    }" | python3 -c "import sys,json; r=json.load(sys.stdin); print(r['choices'][0]['message']['content'])"
+done
 ----
 
-Run the temperature 0.0 query twice -- you should get identical output. Run temperature 1.0 twice -- the output will vary.
+Compare the three outputs in each group. Temperature `0.0` should favor repeatable, high-probability output. Temperature `1.0` allows more variation, although similar or repeated answers are still valid. Temperature is a sampling control, not a uniqueness switch.
 
 For a RAG-based HR assistant, *temperature 0.0-0.3* is usually best. You want consistent, factual answers grounded in retrieved documents, not creative writing.
 

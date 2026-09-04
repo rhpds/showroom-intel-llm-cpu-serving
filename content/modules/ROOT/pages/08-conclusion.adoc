@@ -78,6 +78,7 @@ oc delete deployment anythingllm -n {project_name}
 oc delete svc anythingllm -n {project_name}
 oc delete route anythingllm -n {project_name}
 oc delete secret anythingllm-config -n {project_name}
+oc delete pvc anythingllm-storage -n {project_name}
 ----
 
 == Resources
